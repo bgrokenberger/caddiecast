@@ -848,9 +848,18 @@ function removeFav(query) {
 }
 function loadFav(query, label) {
   document.getElementById('city-input').value = label;
-  // Use resolved city if stored, fallback to query
+  // 1. Check stored cityQuery in favorites
   const favItem = getFavorites().find(f => f.query === query || f.label === label);
-  runCity(favItem ? (favItem.cityQuery || query) : query, label);
+  if (favItem && favItem.cityQuery && favItem.cityQuery !== query) {
+    return runCity(favItem.cityQuery, label);
+  }
+  // 2. Check course DB — query might be a course name
+  const matches = lookupCourse(query);
+  if (matches.length >= 1) {
+    return runCity(matches[0].city, label || matches[0].name);
+  }
+  // 3. Fall back to geocoding the query directly
+  runCity(query, label);
 }
 // Direct city run - skips course detection entirely
 async function runCity(cityQuery, displayName) {
@@ -860,8 +869,16 @@ async function runCity(cityQuery, displayName) {
   inlineErr.innerHTML = '';
   document.getElementById('quick-picks').style.display = 'none';
   mc.innerHTML = '<div class="loading">Fetching forecast<span class="loading-dots"></span></div>';
+
+  // If cityQuery looks like a course name (not a city), resolve it first via course DB
+  let resolvedCity = cityQuery;
+  if (looksLikeCourse(cityQuery)) {
+    const matches = lookupCourse(cityQuery);
+    if (matches.length > 0) resolvedCity = matches[0].city;
+  }
+
   try {
-    const loc = await geocode(cityQuery);
+    const loc = await geocode(resolvedCity);
     const weather = await fetchWeather(loc.latitude, loc.longitude);
     const days = processWeather(weather);
     const name = displayName || (loc.name + (loc.admin1 ? ', ' + loc.admin1 : ''));
