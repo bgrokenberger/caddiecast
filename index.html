@@ -443,10 +443,48 @@ function gradeDesc(g, wind, rain, temp) {
   return `Not ideal. Check the forecast below for a better window.`;
 }
 
-async function geocode(q) {
+const COURSES = {
+  "pebble beach": "Monterey",
+  "augusta national": "Augusta",
+  "st andrews old course": "St Andrews",
+  "pinehurst": "Pinehurst",
+  "torrey pines": "San Diego",
+  "bethpage black": "Farmingdale",
+  "tpc scottsdale": "Scottsdale",
+  "kiawah island": "Kiawah Island",
+  "whistling straits": "Sheboygan",
+  "shinnecock hills": "Southampton",
+  "bay hill": "Orlando",
+  "riviera country club": "Pacific Palisades",
+  "tpc sawgrass": "Ponte Vedra Beach",
+  "muirfield village": "Dublin Ohio",
+  "oakmont": "Oakmont",
+  "winged foot": "Mamaroneck",
+  "quail hollow": "Charlotte",
+  "harbour town": "Hilton Head",
+  "kapalua": "Lahaina",
+  "bandon dunes": "Bandon",
+  "shadow creek": "Las Vegas",
+  "chambers bay": "Tacoma",
+};
+
+function cleanQuery(raw) {
+  const lower = raw.toLowerCase().trim();
+  for (const [course, city] of Object.entries(COURSES)) {
+    if (lower.includes(course)) return city;
+  }
+  // Strip ", AZ" style abbreviations -> just use city name
+  const abbr = raw.match(/^(.+),\s*([A-Z]{2})$/);
+  if (abbr) return abbr[1].trim();
+  // Remove commas so "Scottsdale, Arizona" -> "Scottsdale Arizona"
+  return raw.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+}
+
+async function geocode(raw) {
+  const q = cleanQuery(raw);
   const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
   const d = await r.json();
-  if (!d.results || !d.results.length) throw new Error("Location not found. Try a nearby city name.");
+  if (!d.results || !d.results.length) throw new Error("Location not found. Try just the city name, e.g. \"Scottsdale\" or \"Chicago\".");
   return d.results[0];
 }
 
