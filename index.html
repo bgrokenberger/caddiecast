@@ -561,21 +561,18 @@ function renderHourlyStrip(dayIdx) {
     <div class="scroll-outer" id="hourly-scroll"><div class="hr-strip">${stripHTML}</div></div>
   `;
 
-  // Use setTimeout to ensure DOM is fully painted before measuring
   setTimeout(() => {
     const scroller = document.getElementById('hourly-scroll');
     if (!scroller) return;
     const now = new Date();
-    const targetHour = dayIdx === 0 ? Math.max(6, now.getHours()) : 8;
-    // Find current hour card — show it as the 2nd visible card (1 past hour visible to left)
-    const card = document.getElementById('hr-' + dayIdx + '-' + targetHour)
-      || document.getElementById('hr-' + dayIdx + '-' + (targetHour + 1))
+    const currentHour = dayIdx === 0 ? now.getHours() : 8;
+    const curCard = document.getElementById('hr-' + dayIdx + '-' + currentHour)
       || document.getElementById('hr-' + dayIdx + '-8');
-    if (card) {
-      const cardWidth = card.offsetWidth + 8; // 8px gap
-      scroller.scrollLeft = Math.max(0, card.offsetLeft - cardWidth);
-    }
-  }, 50);
+    if (!curCard) return;
+    // Scroll so current card is 2nd visible: subtract 1 full card + gap from its offsetLeft
+    const cardStep = curCard.offsetWidth + 8;
+    scroller.scrollLeft = Math.max(0, curCard.offsetLeft - cardStep);
+  }, 80);
 }
 
 function selectHour(dayIdx, hour) {
