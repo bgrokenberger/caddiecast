@@ -6,6 +6,7 @@
   <title>CaddieCast — Golf Weather App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -387,6 +388,7 @@
     <div class="share-preview" id="share-preview"></div>
     <div class="share-btns">
       <button class="share-btn-copy" onclick="copyShareLink()">Copy link</button>
+      <button class="share-btn-copy" onclick="downloadCard()" style="flex:1">Save card</button>
       <button class="share-btn-main" onclick="shareCard()">Share</button>
     </div>
   </div>
@@ -1294,7 +1296,9 @@ function renderSharePreview() {
 async function copyShareLink() {
   const day = _days[_shareDay];
   if (!day) return;
-  const loc = encodeURIComponent(_query || _name);
+  // Use resolved city name for reliable geocoding on the other end
+  const cityForUrl = window._lastResolvedCity || _name;
+  const loc = encodeURIComponent(cityForUrl);
   const url = `${window.location.origin}${window.location.pathname}?loc=${loc}&date=${day.date}`;
   try {
     await navigator.clipboard.writeText(url);
@@ -1306,10 +1310,38 @@ async function copyShareLink() {
   }
 }
 
+async function downloadCard() {
+  const preview = document.getElementById('share-preview');
+  if (!preview) return;
+  const btn = document.querySelectorAll('.share-btn-copy')[1];
+  btn.textContent = 'Saving...';
+  try {
+    // Use html2canvas to capture the share card
+    const canvas = await html2canvas(preview, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null,
+      logging: false
+    });
+    const link = document.createElement('a');
+    const day = _days[_shareDay];
+    const dt = day ? new Date(day.date + 'T12:00:00') : new Date();
+    link.download = `caddiecast-${_name.replace(/[^a-z0-9]/gi,'-').toLowerCase()}-${MONTHS[dt.getMonth()]}-${dt.getDate()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    btn.textContent = 'Saved!';
+    setTimeout(() => btn.textContent = 'Save card', 2000);
+  } catch(e) {
+    btn.textContent = 'Save card';
+    alert('To save the card, take a screenshot of the preview above.');
+  }
+}
+
 async function shareCard() {
   const day = _days[_shareDay];
   if (!day) return;
-  const loc = encodeURIComponent(_query || _name);
+  const cityForUrl = window._lastResolvedCity || _name;
+  const loc = encodeURIComponent(cityForUrl);
   const url = `${window.location.origin}${window.location.pathname}?loc=${loc}&date=${day.date}`;
   const dt = new Date(day.date + 'T12:00:00');
   const dateStr = DAYS[dt.getDay()] + ', ' + MONTHS[dt.getMonth()] + ' ' + dt.getDate();
@@ -1337,16 +1369,23 @@ async function shareCard() {
   const loc = params.get('loc');
   const date = params.get('date');
   if (loc) {
-    document.getElementById('city-input').value = decodeURIComponent(loc);
-    // Run after page loads
-    setTimeout(() => {
-      run(decodeURIComponent(loc), null).then(() => {
-        if (date && _days.length) {
-          const idx = _days.findIndex(d => d.date === date);
-          if (idx >= 0) selectDay(idx);
+    const decoded = decodeURIComponent(loc);
+    document.getElementById('city-input').value = decoded;
+    setTimeout(async () => {
+      await run(decoded, null);
+      // After run completes _days is populated - now find and select the date
+      if (date && _days.length) {
+        const idx = _days.findIndex(d => d.date === date);
+        if (idx >= 0) {
+          selectDay(idx);
+          // Scroll the day strip to show selected day
+          setTimeout(() => {
+            const dayCard = document.querySelectorAll('.day-card')[idx];
+            if (dayCard) dayCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }, 200);
         }
-      });
-    }, 100);
+      }
+    }, 150);
   }
 })();
 
