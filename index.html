@@ -471,50 +471,148 @@ function gradeDesc(g, wind, rain, temp) {
 // Detect if query looks like a golf course (not just a city)
 function looksLikeCourse(q) {
   const lower = q.toLowerCase();
-  const courseWords = ["club", "course", "golf", "links", "national", "country", "pines", "dunes", "ridge", "valley", "hills", "bay", "harbor", "harbour", "creek", "meadow", "woods", "forest", "resort", "beach", "manor", "estate", "springs", "ranch", "farm", "island", "point", "cove", "bluff", "highlands", "plantation", "preserve", "oaks", "pines", "glen", "knoll", "moor"];
+  const courseWords = ["club", "course", "golf", "links", "national", "country", "pines", "dunes", "ridge", "valley", "hills", "bay", "harbor", "harbour", "creek", "meadow", "woods", "forest", "resort", "beach", "manor", "estate", "springs", "ranch", "farm", "island", "point", "cove", "bluff", "highlands", "plantation", "preserve", "oaks", "glen", "knoll", "moor", "hollow", "fields", "crossing", "run", "trace", "shores", "bluffs", "crest", "summit", "lakes", "park", "plantation"];
   return courseWords.some(w => lower.includes(w));
 }
 
+// Large course lookup — city is what gets sent to the weather API
+const COURSE_DB = {
+  "pebble beach": { name: "Pebble Beach Golf Links", city: "Monterey", state: "CA" },
+  "augusta national": { name: "Augusta National Golf Club", city: "Augusta", state: "GA" },
+  "st andrews": { name: "The Old Course at St Andrews", city: "St Andrews", state: "Scotland" },
+  "pinehurst no. 2": { name: "Pinehurst No. 2", city: "Pinehurst", state: "NC" },
+  "pinehurst": { name: "Pinehurst Resort", city: "Pinehurst", state: "NC" },
+  "torrey pines": { name: "Torrey Pines Golf Course", city: "San Diego", state: "CA" },
+  "bethpage black": { name: "Bethpage Black", city: "Farmingdale", state: "NY" },
+  "tpc scottsdale": { name: "TPC Scottsdale", city: "Scottsdale", state: "AZ" },
+  "kiawah island": { name: "Kiawah Island Golf Resort", city: "Kiawah Island", state: "SC" },
+  "whistling straits": { name: "Whistling Straits", city: "Sheboygan", state: "WI" },
+  "shinnecock hills": { name: "Shinnecock Hills Golf Club", city: "Southampton", state: "NY" },
+  "bay hill": { name: "Bay Hill Club & Lodge", city: "Orlando", state: "FL" },
+  "riviera country club": { name: "Riviera Country Club", city: "Pacific Palisades", state: "CA" },
+  "tpc sawgrass": { name: "TPC Sawgrass", city: "Ponte Vedra Beach", state: "FL" },
+  "sawgrass": { name: "TPC Sawgrass", city: "Ponte Vedra Beach", state: "FL" },
+  "muirfield village": { name: "Muirfield Village Golf Club", city: "Dublin", state: "OH" },
+  "oakmont": { name: "Oakmont Country Club", city: "Oakmont", state: "PA" },
+  "winged foot": { name: "Winged Foot Golf Club", city: "Mamaroneck", state: "NY" },
+  "quail hollow": { name: "Quail Hollow Club", city: "Charlotte", state: "NC" },
+  "harbour town": { name: "Harbour Town Golf Links", city: "Hilton Head", state: "SC" },
+  "kapalua": { name: "Kapalua Plantation Course", city: "Lahaina", state: "HI" },
+  "bandon dunes": { name: "Bandon Dunes Golf Resort", city: "Bandon", state: "OR" },
+  "shadow creek": { name: "Shadow Creek Golf Course", city: "Las Vegas", state: "NV" },
+  "chambers bay": { name: "Chambers Bay", city: "University Place", state: "WA" },
+  "erin hills": { name: "Erin Hills", city: "Erin", state: "WI" },
+  "congressional": { name: "Congressional Country Club", city: "Bethesda", state: "MD" },
+  "merion": { name: "Merion Golf Club", city: "Ardmore", state: "PA" },
+  "southern hills": { name: "Southern Hills Country Club", city: "Tulsa", state: "OK" },
+  "colonial": { name: "Colonial Country Club", city: "Fort Worth", state: "TX" },
+  "colonial country club": { name: "Colonial Country Club", city: "Fort Worth", state: "TX" },
+  "firestone": { name: "Firestone Country Club", city: "Akron", state: "OH" },
+  "medinah": { name: "Medinah Country Club", city: "Medinah", state: "IL" },
+  "hazeltine": { name: "Hazeltine National Golf Club", city: "Chaska", state: "MN" },
+  "baltusrol": { name: "Baltusrol Golf Club", city: "Springfield", state: "NJ" },
+  "olympic club": { name: "The Olympic Club", city: "San Francisco", state: "CA" },
+  "waialae": { name: "Waialae Country Club", city: "Honolulu", state: "HI" },
+  "seminole": { name: "Seminole Golf Club", city: "Juno Beach", state: "FL" },
+  "cypress point": { name: "Cypress Point Club", city: "Pebble Beach", state: "CA" },
+  "spyglass hill": { name: "Spyglass Hill Golf Course", city: "Pebble Beach", state: "CA" },
+  "pasatiempo": { name: "Pasatiempo Golf Club", city: "Santa Cruz", state: "CA" },
+  "valley club of montecito": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
+  "valley club": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
+  "montecito": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
+  "riviera": { name: "Riviera Country Club", city: "Pacific Palisades", state: "CA" },
+  "los angeles country club": { name: "Los Angeles Country Club", city: "Los Angeles", state: "CA" },
+  "lacc": { name: "Los Angeles Country Club", city: "Los Angeles", state: "CA" },
+  "bel air country club": { name: "Bel-Air Country Club", city: "Los Angeles", state: "CA" },
+  "bel-air country club": { name: "Bel-Air Country Club", city: "Los Angeles", state: "CA" },
+  "north ranch": { name: "North Ranch Country Club", city: "Westlake Village", state: "CA" },
+  "sherwood country club": { name: "Sherwood Country Club", city: "Thousand Oaks", state: "CA" },
+  "pelican hill": { name: "Pelican Hill Golf Club", city: "Newport Coast", state: "CA" },
+  "big canyon": { name: "Big Canyon Country Club", city: "Newport Beach", state: "CA" },
+  "pelican": { name: "Pelican Hill Golf Club", city: "Newport Coast", state: "CA" },
+  "trump national": { name: "Trump National Golf Club", city: "Rancho Palos Verdes", state: "CA" },
+  "trump bedminster": { name: "Trump National Golf Club Bedminster", city: "Bedminster", state: "NJ" },
+  "bedminster": { name: "Trump National Golf Club Bedminster", city: "Bedminster", state: "NJ" },
+  "liberty national": { name: "Liberty National Golf Club", city: "Jersey City", state: "NJ" },
+  "pine valley": { name: "Pine Valley Golf Club", city: "Pine Valley", state: "NJ" },
+  "garden city": { name: "Garden City Golf Club", city: "Garden City", state: "NY" },
+  "national golf links": { name: "National Golf Links of America", city: "Southampton", state: "NY" },
+  "fishers island": { name: "Fishers Island Club", city: "Fishers Island", state: "NY" },
+  "sand hills": { name: "Sand Hills Golf Club", city: "Mullen", state: "NE" },
+  "prairie dunes": { name: "Prairie Dunes Country Club", city: "Hutchinson", state: "KS" },
+  "crystal downs": { name: "Crystal Downs Country Club", city: "Frankfort", state: "MI" },
+  "chicago golf club": { name: "Chicago Golf Club", city: "Wheaton", state: "IL" },
+  "shoreacres": { name: "Shoreacres Golf Club", city: "Lake Bluff", state: "IL" },
+  "sunset ridge": { name: "Sunset Ridge Country Club", city: "Northfield", state: "IL" },
+  "wade hampton": { name: "Wade Hampton Golf Club", city: "Cashiers", state: "NC" },
+  "camargo": { name: "Camargo Club", city: "Cincinnati", state: "OH" },
+  "inverness": { name: "Inverness Club", city: "Toledo", state: "OH" },
+  "canterbury": { name: "Canterbury Golf Club", city: "Beachwood", state: "OH" },
+  "scioto": { name: "Scioto Country Club", city: "Columbus", state: "OH" },
+  "cherokee town": { name: "Cherokee Town and Country Club", city: "Atlanta", state: "GA" },
+  "east lake": { name: "East Lake Golf Club", city: "Atlanta", state: "GA" },
+  "atlanta athletic": { name: "Atlanta Athletic Club", city: "Johns Creek", state: "GA" },
+  "augusta country club": { name: "Augusta Country Club", city: "Augusta", state: "GA" },
+  "sea island": { name: "Sea Island Golf Club", city: "St Simons Island", state: "GA" },
+  "harbour town golf links": { name: "Harbour Town Golf Links", city: "Hilton Head Island", state: "SC" },
+  "yeamans hall": { name: "Yeamans Hall Club", city: "Hanahan", state: "SC" },
+  "palmetto": { name: "Palmetto Golf Club", city: "Aiken", state: "SC" },
+  "brook hollow": { name: "Brook Hollow Golf Club", city: "Dallas", state: "TX" },
+  "dallas national": { name: "Dallas National Golf Club", city: "Dallas", state: "TX" },
+  "san antonio country club": { name: "San Antonio Country Club", city: "San Antonio", state: "TX" },
+  "the quarry": { name: "The Quarry Golf Club", city: "San Antonio", state: "TX" },
+  "las vegas paiute": { name: "Las Vegas Paiute Golf Resort", city: "Las Vegas", state: "NV" },
+  "wolf creek": { name: "Wolf Creek Golf Club", city: "Mesquite", state: "NV" },
+  "edgewood tahoe": { name: "Edgewood Tahoe Golf Course", city: "Stateline", state: "NV" },
+  "pumpkin ridge": { name: "Pumpkin Ridge Golf Club", city: "North Plains", state: "OR" },
+  "salish cliffs": { name: "Salish Cliffs Golf Club", city: "Shelton", state: "WA" },
+  "tacoma country": { name: "Tacoma Country and Golf Club", city: "Tacoma", state: "WA" },
+  "sahalee": { name: "Sahalee Country Club", city: "Sammamish", state: "WA" },
+  "victoria golf club": { name: "Victoria Golf Club", city: "Victoria", state: "BC" },
+  "capilano": { name: "Capilano Golf and Country Club", city: "Vancouver", state: "BC" },
+  "royal montreal": { name: "Royal Montreal Golf Club", city: "Montreal", state: "QC" },
+  "royal york": { name: "Royal York Golf Club", city: "Toronto", state: "ON" },
+  "muirfield": { name: "Muirfield (Honourable Company)", city: "Gullane", state: "Scotland" },
+  "carnoustie": { name: "Carnoustie Golf Links", city: "Carnoustie", state: "Scotland" },
+  "royal troon": { name: "Royal Troon Golf Club", city: "Troon", state: "Scotland" },
+  "turnberry": { name: "Trump Turnberry", city: "Girvan", state: "Scotland" },
+  "royal birkdale": { name: "Royal Birkdale Golf Club", city: "Southport", state: "England" },
+  "hoylake": { name: "Royal Liverpool Golf Club", city: "Hoylake", state: "England" },
+  "royal liverpool": { name: "Royal Liverpool Golf Club", city: "Hoylake", state: "England" },
+  "sunningdale": { name: "Sunningdale Golf Club", city: "Sunningdale", state: "England" },
+  "wentworth": { name: "Wentworth Club", city: "Virginia Water", state: "England" },
+  "royal portrush": { name: "Royal Portrush Golf Club", city: "Portrush", state: "Northern Ireland" },
+  "portmarnock": { name: "Portmarnock Golf Club", city: "Portmarnock", state: "Ireland" },
+  "ballybunion": { name: "Ballybunion Golf Club", city: "Ballybunion", state: "Ireland" },
+  "lahinch": { name: "Lahinch Golf Club", city: "Lahinch", state: "Ireland" },
+  "royal county down": { name: "Royal County Down Golf Club", city: "Newcastle", state: "Northern Ireland" },
+};
+
+function lookupCourse(raw) {
+  const lower = raw.toLowerCase().trim();
+  // Exact or substring match
+  for (const [key, val] of Object.entries(COURSE_DB)) {
+    if (lower === key || lower.includes(key) || key.includes(lower)) {
+      return [val];
+    }
+  }
+  // Partial word match - find all courses that share significant words
+  const words = lower.split(/\s+/).filter(w => w.length > 3);
+  const matches = [];
+  for (const [key, val] of Object.entries(COURSE_DB)) {
+    const score = words.filter(w => key.includes(w)).length;
+    if (score >= 1) matches.push({ ...val, score });
+  }
+  matches.sort((a, b) => b.score - a.score);
+  // Dedupe by name
+  const seen = new Set();
+  return matches.filter(m => { if (seen.has(m.name)) return false; seen.add(m.name); return true; }).slice(0, 4);
+}
+
 function cleanCityQuery(raw) {
-  // Strip ", AZ" style abbreviations
   const abbr = raw.match(/^(.+),\s*([A-Z]{2})$/);
   if (abbr) return abbr[1].trim();
-  // Remove commas
   return raw.replace(/,/g, " ").replace(/\s+/g, " ").trim();
-}
-
-async function lookupCourseWithClaude(courseName) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `I need to find the location of a golf course to get weather data. The user searched for: "${courseName}"
-
-Please identify this golf course and return ONLY a JSON object (no markdown, no explanation) in this format:
-{
-  "found": true,
-  "courses": [
-    { "name": "Full Course Name", "city": "City", "state": "State or Country", "searchCity": "City name to search for weather" }
-  ]
-}
-
-If you find multiple possible matches, include all of them (up to 4). If you cannot identify any golf course from this query, return { "found": false }.
-
-The "searchCity" field should be just the city name, suitable for a weather API lookup.`
-      }]
-    })
-  });
-  const data = await response.json();
-  const text = data.content?.[0]?.text || "";
-  try {
-    return JSON.parse(text.trim());
-  } catch {
-    return { found: false };
-  }
 }
 
 async function geocode(cityName) {
@@ -635,33 +733,29 @@ async function run(query, displayName, cityOverride) {
   inlineErr.innerHTML = "";
   document.getElementById("quick-picks").style.display = "none";
 
-  // If it looks like a course, ask Claude to identify it
+  // If it looks like a course, check our course database
   if (!cityOverride && looksLikeCourse(query)) {
-    mc.innerHTML = `<div class="loading">Looking up course<span class="loading-dots"></span></div>`;
-    try {
-      const result = await lookupCourseWithClaude(query);
-      if (result.found && result.courses && result.courses.length > 0) {
-        if (result.courses.length === 1) {
-          const course = result.courses[0];
-          const label = course.name + " — " + course.city + ", " + course.state;
-          return run(course.searchCity, label, true);
-        } else {
-          mc.innerHTML = "";
-          document.getElementById("quick-picks").style.display = "block";
-          inlineErr.style.display = "block";
-          const chips = result.courses.map(c => {
-            const label = c.name + " — " + c.city + ", " + c.state;
-            const safe = label.replace(/'/g, "\'");
-            return `<button class="chip" onclick="run('${c.searchCity}', '${safe}', true)">${c.name} <span style="opacity:0.6;font-size:11px">${c.city}, ${c.state}</span></button>`;
-          }).join("");
-          inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
-            <p style="color:var(--blue-dark)">Found a few matches — which one?</p>
-            <div class="suggestion-chips">${chips}</div>
-          </div>`;
-          return;
-        }
-      }
-    } catch(e) { /* fall through */ }
+    const matches = lookupCourse(query);
+    if (matches.length === 1) {
+      const course = matches[0];
+      const label = course.name + " — " + course.city + ", " + course.state;
+      return run(course.city, label, true);
+    } else if (matches.length > 1) {
+      mc.innerHTML = "";
+      document.getElementById("quick-picks").style.display = "block";
+      inlineErr.style.display = "block";
+      const chips = matches.map(c => {
+        const label = c.name + " — " + c.city + ", " + c.state;
+        const safe = label.replace(/'/g, "\'");
+        return `<button class="chip" onclick="run('${c.city}', '${safe}', true)">${c.name} <span style="opacity:0.6;font-size:11px">${c.city}, ${c.state}</span></button>`;
+      }).join("");
+      inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
+        <p style="color:var(--blue-dark)">Found a few matches — which one?</p>
+        <div class="suggestion-chips">${chips}</div>
+      </div>`;
+      inlineErr.style.display = "block";
+      return;
+    }
   }
 
   mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
