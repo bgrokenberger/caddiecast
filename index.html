@@ -178,15 +178,15 @@
     .footer a { color: var(--green-mid); text-decoration: none; }
 
     /* ── Action buttons row ── */
-    .action-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+    .action-row { display: flex; gap: 8px; margin-bottom: 1.25rem; justify-content: center; }
     .action-btn {
-      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 11px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-      background: var(--card); font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
-      color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+      color: var(--text-tertiary); cursor: pointer; transition: all 0.15s;
     }
-    .action-btn:hover { border-color: var(--green-mid); color: var(--green-mid); background: var(--green-light); }
-    .action-btn.active { border-color: #e24b4a; color: #e24b4a; background: var(--red-light); }
+    .action-btn:hover { border-color: var(--green-border); color: var(--green-mid); background: var(--green-light); }
+    .action-btn.active { border-color: #f7c1c1; color: #e24b4a; background: var(--red-light); }
 
     /* ── Share modal ── */
     .modal-backdrop {
@@ -1158,7 +1158,7 @@ function renderApp(name, days, query) {
       <div class="grade-desc" id="grade-desc" style="color:${col.text};opacity:0.75">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
       <div class="action-row">
         <button id="heart-btn" class="action-btn" onclick="toggleFavorite(this.dataset.query, this.dataset.label)" data-query="${query||name}" data-label="${name}">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg"><path d="M8 13.7C7.6 13.4 1.5 9.4 1.5 5.5a3.5 3.5 0 0 1 6.5-1.8A3.5 3.5 0 0 1 14.5 5.5c0 3.9-6.1 7.9-6.5 8.2z"/></svg> Save
         </button>
         <button class="action-btn" onclick="openShareModal()">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="3" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="12" cy="13" r="1.5"/><line x1="5.5" y1="7" x2="10.5" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="9" x2="10.5" y2="12" stroke="currentColor" stroke-width="1.5"/></svg> Share
@@ -1330,9 +1330,9 @@ function updateHeartBtn(query) {
   const btn = document.getElementById('heart-btn');
   if (!btn) return;
   const saved = isFavorite(query);
-  btn.innerHTML = saved
-    ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="#e24b4a"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Saved`
-    : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save`;
+  const heartFilled = `<svg width="13" height="13" viewBox="0 0 16 16" fill="#e24b4a" xmlns="http://www.w3.org/2000/svg"><path d="M8 13.7C7.6 13.4 1.5 9.4 1.5 5.5a3.5 3.5 0 0 1 6.5-1.8A3.5 3.5 0 0 1 14.5 5.5c0 3.9-6.1 7.9-6.5 8.2z"/></svg>`;
+  const heartEmpty = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg"><path d="M8 13.7C7.6 13.4 1.5 9.4 1.5 5.5a3.5 3.5 0 0 1 6.5-1.8A3.5 3.5 0 0 1 14.5 5.5c0 3.9-6.1 7.9-6.5 8.2z"/></svg>`;
+  btn.innerHTML = saved ? heartFilled + ' Saved' : heartEmpty + ' Save';
   btn.style.color = saved ? '#e24b4a' : '';
   btn.dataset.query = query;
   btn.dataset.label = document.getElementById('city-input').value || query;
