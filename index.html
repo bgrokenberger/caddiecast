@@ -174,6 +174,40 @@
       .fav-mobile { display: block; }
       .header-logo { font-size: 26px; }
     }
+
+    /* ── Hourly strip ── */
+    .hr-strip { display: flex; gap: 8px; width: max-content; padding-bottom: 4px; }
+    .hr-card {
+      width: 58px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 4px; text-align: center;
+      cursor: default; transition: opacity 0.2s;
+    }
+    .hr-card.hr-past { opacity: 0.35; }
+    .hr-time { font-size: 10px; color: var(--text-tertiary); margin-bottom: 5px; }
+    .hr-grade {
+      font-size: 13px; font-weight: 600; padding: 3px 4px; border-radius: 6px;
+      border: 1px solid; margin-bottom: 5px; display: block;
+    }
+    .hr-temp { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .hr-rain { font-size: 11px; margin-bottom: 2px; }
+    .hr-wind { font-size: 10px; color: var(--text-tertiary); }
+
+    /* ── Best window ── */
+    .best-window {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+    }
+    .bw-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .bw-time { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+    .bw-grade { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+
+    /* ── Day strip selected state ── */
+    .day-card { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+    .day-card:hover { border-color: var(--green-border); transform: translateY(-1px); }
+    .day-card.selected { border-color: var(--green-mid); border-width: 2px; background: var(--green-light); }
+    .day-card.selected .day-grade { color: var(--green-mid) !important; }
+
   </style>
 </head>
 <body>
@@ -230,8 +264,16 @@
 
 <script>
 
+
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// ── Scoring ───────────────────────────────────────────────
+function windScore(v)  { if(v<=5)return 25; if(v<=10)return 23; if(v<=15)return 19; if(v<=20)return 14; if(v<=25)return 8; if(v<=35)return 3; return 0; }
+function rainScore(v)  { if(v<=10)return 25; if(v<=20)return 21; if(v<=35)return 15; if(v<=50)return 8; if(v<=70)return 3; return 0; }
+function tempScore(v)  { if(v>=62&&v<=82)return 25; if(v>=55&&v<=90)return 21; if(v>=45&&v<=95)return 15; if(v>=38&&v<=100)return 8; return 2; }
+function humidScore(v) { if(v<=45)return 25; if(v<=60)return 21; if(v<=72)return 15; if(v<=85)return 8; return 3; }
+function hourScore(wind, rain, temp, humid) { return windScore(wind) + rainScore(rain) + tempScore(temp) + humidScore(humid); }
 
 function gradeFromScore(s) {
   if (s >= 93) return "A+"; if (s >= 87) return "A"; if (s >= 83) return "A-";
@@ -239,7 +281,6 @@ function gradeFromScore(s) {
   if (s >= 67) return "C+"; if (s >= 63) return "C"; if (s >= 60) return "C-";
   if (s >= 55) return "D+"; if (s >= 50) return "D"; return "F";
 }
-
 function gradeColor(g) {
   const c = g[0];
   if (c === "A") return { text: "#1a3d0a", bg: "#EAF3DE", border: "#C0DD97" };
@@ -247,27 +288,217 @@ function gradeColor(g) {
   if (c === "C") return { text: "#633806", bg: "#FAEEDA", border: "#FAC775" };
   return { text: "#791F1F", bg: "#FCEBEB", border: "#F7C1C1" };
 }
-
-function windScore(v)  { if(v<=5)return 25; if(v<=10)return 23; if(v<=15)return 19; if(v<=20)return 14; if(v<=25)return 8; if(v<=35)return 3; return 0; }
-function rainScore(v)  { if(v<=10)return 25; if(v<=20)return 21; if(v<=35)return 15; if(v<=50)return 8; if(v<=70)return 3; return 0; }
-function tempScore(v)  { if(v>=62&&v<=82)return 25; if(v>=55&&v<=90)return 21; if(v>=45&&v<=95)return 15; if(v>=38&&v<=100)return 8; return 2; }
-function humidScore(v) { if(v<=45)return 25; if(v<=60)return 21; if(v<=72)return 15; if(v<=85)return 8; return 3; }
-
 function factorLabel(type, val) {
   if (type==="wind")  { if(val<=8)return["Low","g"]; if(val<=18)return["Breezy","w"]; return["Strong","b"]; }
   if (type==="rain")  { if(val<=15)return["None","g"]; if(val<=40)return["Possible","w"]; return["Likely","b"]; }
   if (type==="temp")  { if(val>=62&&val<=82)return["Perfect","g"]; if(val>=50&&val<=92)return["Ok","w"]; return["Rough","b"]; }
   if (type==="humid") { if(val<=50)return["Comfortable","g"]; if(val<=72)return["Moderate","w"]; return["Muggy","b"]; }
 }
-
 function barFill(cls) { return cls==="g"?"#639922":cls==="w"?"#EF9F27":"#E24B4A"; }
-
 function gradeTitle(g) {
   const c = g[0];
   if (c==="A") return "Great day to play";
   if (c==="B") return "Good enough to play";
   if (c==="C") return "Marginal — your call";
   return "Skip it today";
+}
+
+// Best 4-hour window score
+function bestWindow(hours) {
+  // hours is array of {hour, score, grade, wind, rain, temp, humid}
+  // Only consider 6am-7pm (hours 6-19)
+  const playable = hours.filter(h => h.hour >= 6 && h.hour <= 19);
+  if (!playable.length) return null;
+  let best = null, bestScore = -1;
+  for (let i = 0; i <= playable.length - 4; i++) {
+    const window = playable.slice(i, i + 4);
+    const avg = window.reduce((s, h) => s + h.score, 0) / 4;
+    if (avg > bestScore) { bestScore = avg; best = window; }
+  }
+  if (!best) best = [playable[0]];
+  const startHour = best[0].hour;
+  const endHour = best[best.length-1].hour + 1;
+  const fmt = h => { const ampm = h >= 12 ? 'pm' : 'am'; return (h > 12 ? h-12 : h || 12) + ampm; };
+  return { label: `${fmt(startHour)}–${fmt(endHour)}`, score: Math.round(bestScore), grade: gradeFromScore(Math.round(bestScore)) };
+}
+
+// ── Fetch ─────────────────────────────────────────────────
+async function fetchWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+    + `&hourly=temperature_2m,precipitation_probability,windspeed_10m,relativehumidity_2m`
+    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max`
+    + `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
+  const r = await fetch(url);
+  const data = await r.json();
+  if (data.error) throw new Error("Weather data unavailable: " + (data.reason || "unknown error"));
+  if (!data.daily) throw new Error("No weather data returned for this location.");
+  return data;
+}
+
+// ── Process ───────────────────────────────────────────────
+function processWeather(data) {
+  const h = data.hourly;
+  const d = data.daily;
+
+  // Build hourly array
+  const allHours = h.time.map((t, i) => {
+    const dt = new Date(t);
+    return {
+      datetime: t,
+      date: t.split('T')[0],
+      hour: dt.getHours(),
+      temp: h.temperature_2m[i] || 60,
+      rain: h.precipitation_probability[i] || 0,
+      wind: h.windspeed_10m[i] || 0,
+      humid: h.relativehumidity_2m[i] || 50,
+      score: hourScore(h.windspeed_10m[i]||0, h.precipitation_probability[i]||0, h.temperature_2m[i]||60, h.relativehumidity_2m[i]||50),
+    };
+  }).map(h => ({ ...h, grade: gradeFromScore(h.score) }));
+
+  // Group by day
+  const days = d.time.map((date, i) => {
+    const dayHours = allHours.filter(h => h.date === date);
+    // Use best 4-hour window for headline grade (6am-7pm only)
+    const playableHours = dayHours.filter(h => h.hour >= 6 && h.hour <= 19);
+    const avgScore = playableHours.length
+      ? Math.round(playableHours.reduce((s,h) => s + h.score, 0) / playableHours.length)
+      : Math.round((windScore(d.windspeed_10m_max[i]||0) + rainScore(d.precipitation_probability_max[i]||0) + tempScore((d.temperature_2m_max[i]+d.temperature_2m_min[i])/2) + humidScore(50)));
+    const window = bestWindow(dayHours);
+    return {
+      date,
+      temp: (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2,
+      wind: d.windspeed_10m_max[i] || 0,
+      rain: d.precipitation_probability_max[i] || 0,
+      humid: playableHours.length ? Math.round(playableHours.reduce((s,h) => s+h.humid,0)/playableHours.length) : 50,
+      score: avgScore,
+      grade: gradeFromScore(avgScore),
+      hours: dayHours,
+      bestWindow: window,
+    };
+  });
+  return days;
+}
+
+// ── State ─────────────────────────────────────────────────
+let _days = [];
+let _name = '';
+let _query = '';
+let _selectedDay = 0;
+
+// ── Render helpers ────────────────────────────────────────
+function fmtHour(h) { return h === 0 ? '12am' : h === 12 ? '12pm' : h > 12 ? `${h-12}pm` : `${h}am`; }
+
+function renderHourlyStrip(dayIdx) {
+  const day = _days[dayIdx];
+  if (!day) return;
+  const hours = day.hours.filter(h => h.hour >= 6 && h.hour <= 20);
+  const now = new Date();
+  const isToday = dayIdx === 0;
+
+  const stripHTML = hours.map(h => {
+    const gc = gradeColor(h.grade);
+    const isPast = isToday && h.hour < now.getHours();
+    return `<div class="hr-card ${isPast ? 'hr-past' : ''}">
+      <div class="hr-time">${fmtHour(h.hour)}</div>
+      <div class="hr-grade" style="color:${gc.text};background:${gc.bg};border-color:${gc.border}">${h.grade}</div>
+      <div class="hr-temp">${Math.round(h.temp)}°</div>
+      <div class="hr-rain" style="color:${h.rain>40?'#A32D2D':h.rain>20?'#854F0B':'#999'}">${Math.round(h.rain)}%</div>
+      <div class="hr-wind">${Math.round(h.wind)}mph</div>
+    </div>`;
+  }).join('');
+
+  const win = day.bestWindow;
+  const winHtml = win ? `<div class="best-window">
+    <span class="bw-label">Best window</span>
+    <span class="bw-time">${win.label}</span>
+    <span class="bw-grade" style="color:${gradeColor(win.grade).text};background:${gradeColor(win.grade).bg}">${win.grade}</span>
+  </div>` : '';
+
+  document.getElementById('hourly-section').innerHTML = `
+    ${winHtml}
+    <div class="scroll-outer"><div class="hr-strip">${stripHTML}</div></div>
+  `;
+}
+
+function renderDayStrip() {
+  let html = '';
+  let lastWeek = 0;
+  for (let i = 0; i < _days.length; i++) {
+    const day = _days[i];
+    const d = new Date(day.date + 'T12:00:00');
+    const weekNum = Math.floor(i / 7);
+    const isFarOut = i >= 7;
+    const gc = gradeColor(day.grade);
+    const opacity = isFarOut ? Math.max(0.38, 1 - (i-7)*0.04) : 1;
+    const isSelected = i === _selectedDay;
+    if (weekNum !== lastWeek) {
+      html += `<div class="wk-divider"><div class="wk-line"></div><span class="wk-text">Wk ${weekNum+1}</span><div class="wk-line"></div></div>`;
+      lastWeek = weekNum;
+    }
+    html += `<div class="day-card ${i===0?'today':''} ${isSelected?'selected':''}" style="opacity:${opacity}" onclick="selectDay(${i})">
+      <div class="day-name">${DAYS[d.getDay()]}</div>
+      <div class="day-date">${MONTHS[d.getMonth()]} ${d.getDate()}</div>
+      <div class="day-grade" style="color:${gc.text}">${day.grade}</div>
+      ${isFarOut ? '<div class="day-est">est.</div>' : ''}
+    </div>`;
+  }
+  document.getElementById('day-strip').innerHTML = html;
+}
+
+function selectDay(idx) {
+  _selectedDay = idx;
+  const day = _days[idx];
+  const col = gradeColor(day.grade);
+  const [wLbl,wCls] = factorLabel('wind', day.wind);
+  const [rLbl,rCls] = factorLabel('rain', day.rain);
+  const [tLbl,tCls] = factorLabel('temp', day.temp);
+  const [hLbl,hCls] = factorLabel('humid', day.humid);
+  const dateStr = new Date(day.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  const isFarOut = idx >= 7;
+
+  // Update grade card
+  document.getElementById('grade-circle').style.background = col.bg;
+  document.getElementById('grade-circle').style.color = col.text;
+  document.getElementById('grade-circle').style.border = `2px solid ${col.border}`;
+  document.getElementById('grade-circle').textContent = day.grade;
+  document.getElementById('grade-title').textContent = gradeTitle(day.grade);
+  document.getElementById('grade-desc').textContent = isFarOut
+    ? `Estimated forecast for ${dateStr}. Check back closer to the date.`
+    : gradeDesc(day.grade, day.wind, day.rain, day.temp);
+  document.getElementById('selected-date').textContent = dateStr;
+
+  // Update factors
+  document.getElementById('f-wind-val').textContent = Math.round(day.wind) + ' mph';
+  document.getElementById('f-wind-pill').textContent = wLbl;
+  document.getElementById('f-wind-pill').className = `pill pill-${wCls}`;
+  document.getElementById('f-wind-bar').style.width = Math.min(100,Math.round(day.wind*2.5))+'%';
+  document.getElementById('f-wind-bar').style.background = barFill(wCls);
+
+  document.getElementById('f-rain-val').textContent = Math.round(day.rain) + '%';
+  document.getElementById('f-rain-pill').textContent = rLbl;
+  document.getElementById('f-rain-pill').className = `pill pill-${rCls}`;
+  document.getElementById('f-rain-bar').style.width = Math.round(day.rain)+'%';
+  document.getElementById('f-rain-bar').style.background = barFill(rCls);
+
+  document.getElementById('f-temp-val').textContent = Math.round(day.temp) + '°F';
+  document.getElementById('f-temp-pill').textContent = tLbl;
+  document.getElementById('f-temp-pill').className = `pill pill-${tCls}`;
+  document.getElementById('f-temp-bar').style.width = Math.min(100,Math.max(0,Math.round(((day.temp-32)/78)*100)))+'%';
+  document.getElementById('f-temp-bar').style.background = barFill(tCls);
+
+  document.getElementById('f-humid-val').textContent = Math.round(day.humid) + '%';
+  document.getElementById('f-humid-pill').textContent = hLbl;
+  document.getElementById('f-humid-pill').className = `pill pill-${hCls}`;
+  document.getElementById('f-humid-bar').style.width = Math.round(day.humid)+'%';
+  document.getElementById('f-humid-bar').style.background = barFill(hCls);
+
+  // Update day strip selection
+  document.querySelectorAll('.day-card').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+
+  // Update hourly
+  renderHourlyStrip(idx);
 }
 
 function gradeDesc(g, wind, rain, temp) {
@@ -279,269 +510,76 @@ function gradeDesc(g, wind, rain, temp) {
     return `Decent conditions. A solid round is on the cards.`;
   }
   if (c==="C") return `Marginal day. Playable if you don't mind grinding it out.`;
-  return `Not ideal. Check the forecast below for a better window.`;
-}
-
-// Detect if query looks like a golf course (not just a city)
-function looksLikeCourse(q) {
-  const lower = q.toLowerCase();
-  const courseWords = ["club", "course", "golf", "links", "national", "country", "pines", "dunes", "ridge", "valley", "hills", "bay", "harbor", "harbour", "creek", "meadow", "woods", "forest", "resort", "beach", "manor", "estate", "springs", "ranch", "farm", "island", "point", "cove", "bluff", "highlands", "plantation", "preserve", "oaks", "glen", "knoll", "moor", "hollow", "fields", "crossing", "run", "trace", "shores", "bluffs", "crest", "summit", "lakes", "park", "plantation"];
-  return courseWords.some(w => lower.includes(w));
-}
-
-// Large course lookup — city is what gets sent to the weather API
-const COURSE_DB = {
-  "pebble beach": { name: "Pebble Beach Golf Links", city: "Monterey", state: "CA" },
-  "augusta national": { name: "Augusta National Golf Club", city: "Augusta", state: "GA" },
-  "st andrews": { name: "The Old Course at St Andrews", city: "St Andrews", state: "Scotland" },
-  "pinehurst no. 2": { name: "Pinehurst No. 2", city: "Pinehurst", state: "NC" },
-  "pinehurst": { name: "Pinehurst Resort", city: "Pinehurst", state: "NC" },
-  "torrey pines": { name: "Torrey Pines Golf Course", city: "San Diego", state: "CA" },
-  "bethpage black": { name: "Bethpage Black", city: "Farmingdale", state: "NY" },
-  "tpc scottsdale": { name: "TPC Scottsdale", city: "Scottsdale", state: "AZ" },
-  "kiawah island": { name: "Kiawah Island Golf Resort", city: "Kiawah Island", state: "SC" },
-  "whistling straits": { name: "Whistling Straits", city: "Sheboygan", state: "WI" },
-  "shinnecock hills": { name: "Shinnecock Hills Golf Club", city: "Southampton", state: "NY" },
-  "bay hill": { name: "Bay Hill Club & Lodge", city: "Orlando", state: "FL" },
-  "riviera country club": { name: "Riviera Country Club", city: "Pacific Palisades", state: "CA" },
-  "tpc sawgrass": { name: "TPC Sawgrass", city: "Ponte Vedra Beach", state: "FL" },
-  "sawgrass": { name: "TPC Sawgrass", city: "Ponte Vedra Beach", state: "FL" },
-  "muirfield village": { name: "Muirfield Village Golf Club", city: "Dublin", state: "OH" },
-  "oakmont": { name: "Oakmont Country Club", city: "Oakmont", state: "PA" },
-  "winged foot": { name: "Winged Foot Golf Club", city: "Mamaroneck", state: "NY" },
-  "quail hollow": { name: "Quail Hollow Club", city: "Charlotte", state: "NC" },
-  "harbour town": { name: "Harbour Town Golf Links", city: "Hilton Head", state: "SC" },
-  "kapalua": { name: "Kapalua Plantation Course", city: "Lahaina", state: "HI" },
-  "bandon dunes": { name: "Bandon Dunes Golf Resort", city: "Bandon", state: "OR" },
-  "shadow creek": { name: "Shadow Creek Golf Course", city: "Las Vegas", state: "NV" },
-  "chambers bay": { name: "Chambers Bay", city: "University Place", state: "WA" },
-  "erin hills": { name: "Erin Hills", city: "Erin", state: "WI" },
-  "congressional": { name: "Congressional Country Club", city: "Bethesda", state: "MD" },
-  "merion": { name: "Merion Golf Club", city: "Ardmore", state: "PA" },
-  "southern hills": { name: "Southern Hills Country Club", city: "Tulsa", state: "OK" },
-  "colonial": { name: "Colonial Country Club", city: "Fort Worth", state: "TX" },
-  "colonial country club": { name: "Colonial Country Club", city: "Fort Worth", state: "TX" },
-  "firestone": { name: "Firestone Country Club", city: "Akron", state: "OH" },
-  "medinah": { name: "Medinah Country Club", city: "Medinah", state: "IL" },
-  "hazeltine": { name: "Hazeltine National Golf Club", city: "Chaska", state: "MN" },
-  "baltusrol": { name: "Baltusrol Golf Club", city: "Springfield", state: "NJ" },
-  "olympic club": { name: "The Olympic Club", city: "San Francisco", state: "CA" },
-  "waialae": { name: "Waialae Country Club", city: "Honolulu", state: "HI" },
-  "seminole": { name: "Seminole Golf Club", city: "Juno Beach", state: "FL" },
-  "cypress point": { name: "Cypress Point Club", city: "Pebble Beach", state: "CA" },
-  "spyglass hill": { name: "Spyglass Hill Golf Course", city: "Pebble Beach", state: "CA" },
-  "pasatiempo": { name: "Pasatiempo Golf Club", city: "Santa Cruz", state: "CA" },
-  "valley club of montecito": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
-  "valley club": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
-  "montecito": { name: "The Valley Club of Montecito", city: "Montecito", state: "CA" },
-  "riviera": { name: "Riviera Country Club", city: "Pacific Palisades", state: "CA" },
-  "los angeles country club": { name: "Los Angeles Country Club", city: "Los Angeles", state: "CA" },
-  "lacc": { name: "Los Angeles Country Club", city: "Los Angeles", state: "CA" },
-  "bel air country club": { name: "Bel-Air Country Club", city: "Los Angeles", state: "CA" },
-  "bel-air country club": { name: "Bel-Air Country Club", city: "Los Angeles", state: "CA" },
-  "north ranch": { name: "North Ranch Country Club", city: "Westlake Village", state: "CA" },
-  "sherwood country club": { name: "Sherwood Country Club", city: "Thousand Oaks", state: "CA" },
-  "pelican hill": { name: "Pelican Hill Golf Club", city: "Newport Coast", state: "CA" },
-  "big canyon": { name: "Big Canyon Country Club", city: "Newport Beach", state: "CA" },
-  "pelican": { name: "Pelican Hill Golf Club", city: "Newport Coast", state: "CA" },
-  "trump national": { name: "Trump National Golf Club", city: "Rancho Palos Verdes", state: "CA" },
-  "trump bedminster": { name: "Trump National Golf Club Bedminster", city: "Bedminster", state: "NJ" },
-  "bedminster": { name: "Trump National Golf Club Bedminster", city: "Bedminster", state: "NJ" },
-  "liberty national": { name: "Liberty National Golf Club", city: "Jersey City", state: "NJ" },
-  "pine valley": { name: "Pine Valley Golf Club", city: "Pine Valley", state: "NJ" },
-  "garden city": { name: "Garden City Golf Club", city: "Garden City", state: "NY" },
-  "national golf links": { name: "National Golf Links of America", city: "Southampton", state: "NY" },
-  "fishers island": { name: "Fishers Island Club", city: "Fishers Island", state: "NY" },
-  "sand hills": { name: "Sand Hills Golf Club", city: "Mullen", state: "NE" },
-  "prairie dunes": { name: "Prairie Dunes Country Club", city: "Hutchinson", state: "KS" },
-  "crystal downs": { name: "Crystal Downs Country Club", city: "Frankfort", state: "MI" },
-  "chicago golf club": { name: "Chicago Golf Club", city: "Wheaton", state: "IL" },
-  "shoreacres": { name: "Shoreacres Golf Club", city: "Lake Bluff", state: "IL" },
-  "sunset ridge": { name: "Sunset Ridge Country Club", city: "Northfield", state: "IL" },
-  "wade hampton": { name: "Wade Hampton Golf Club", city: "Cashiers", state: "NC" },
-  "camargo": { name: "Camargo Club", city: "Cincinnati", state: "OH" },
-  "inverness": { name: "Inverness Club", city: "Toledo", state: "OH" },
-  "canterbury": { name: "Canterbury Golf Club", city: "Beachwood", state: "OH" },
-  "scioto": { name: "Scioto Country Club", city: "Columbus", state: "OH" },
-  "cherokee town": { name: "Cherokee Town and Country Club", city: "Atlanta", state: "GA" },
-  "east lake": { name: "East Lake Golf Club", city: "Atlanta", state: "GA" },
-  "atlanta athletic": { name: "Atlanta Athletic Club", city: "Johns Creek", state: "GA" },
-  "augusta country club": { name: "Augusta Country Club", city: "Augusta", state: "GA" },
-  "sea island": { name: "Sea Island Golf Club", city: "St Simons Island", state: "GA" },
-  "harbour town golf links": { name: "Harbour Town Golf Links", city: "Hilton Head Island", state: "SC" },
-  "yeamans hall": { name: "Yeamans Hall Club", city: "Hanahan", state: "SC" },
-  "palmetto": { name: "Palmetto Golf Club", city: "Aiken", state: "SC" },
-  "brook hollow": { name: "Brook Hollow Golf Club", city: "Dallas", state: "TX" },
-  "dallas national": { name: "Dallas National Golf Club", city: "Dallas", state: "TX" },
-  "san antonio country club": { name: "San Antonio Country Club", city: "San Antonio", state: "TX" },
-  "the quarry": { name: "The Quarry Golf Club", city: "San Antonio", state: "TX" },
-  "las vegas paiute": { name: "Las Vegas Paiute Golf Resort", city: "Las Vegas", state: "NV" },
-  "wolf creek": { name: "Wolf Creek Golf Club", city: "Mesquite", state: "NV" },
-  "edgewood tahoe": { name: "Edgewood Tahoe Golf Course", city: "Stateline", state: "NV" },
-  "pumpkin ridge": { name: "Pumpkin Ridge Golf Club", city: "North Plains", state: "OR" },
-  "salish cliffs": { name: "Salish Cliffs Golf Club", city: "Shelton", state: "WA" },
-  "tacoma country": { name: "Tacoma Country and Golf Club", city: "Tacoma", state: "WA" },
-  "sahalee": { name: "Sahalee Country Club", city: "Sammamish", state: "WA" },
-  "victoria golf club": { name: "Victoria Golf Club", city: "Victoria", state: "BC" },
-  "capilano": { name: "Capilano Golf and Country Club", city: "Vancouver", state: "BC" },
-  "royal montreal": { name: "Royal Montreal Golf Club", city: "Montreal", state: "QC" },
-  "royal york": { name: "Royal York Golf Club", city: "Toronto", state: "ON" },
-  "muirfield": { name: "Muirfield (Honourable Company)", city: "Gullane", state: "Scotland" },
-  "carnoustie": { name: "Carnoustie Golf Links", city: "Carnoustie", state: "Scotland" },
-  "royal troon": { name: "Royal Troon Golf Club", city: "Troon", state: "Scotland" },
-  "turnberry": { name: "Trump Turnberry", city: "Girvan", state: "Scotland" },
-  "royal birkdale": { name: "Royal Birkdale Golf Club", city: "Southport", state: "England" },
-  "hoylake": { name: "Royal Liverpool Golf Club", city: "Hoylake", state: "England" },
-  "royal liverpool": { name: "Royal Liverpool Golf Club", city: "Hoylake", state: "England" },
-  "sunningdale": { name: "Sunningdale Golf Club", city: "Sunningdale", state: "England" },
-  "wentworth": { name: "Wentworth Club", city: "Virginia Water", state: "England" },
-  "royal portrush": { name: "Royal Portrush Golf Club", city: "Portrush", state: "Northern Ireland" },
-  "portmarnock": { name: "Portmarnock Golf Club", city: "Portmarnock", state: "Ireland" },
-  "ballybunion": { name: "Ballybunion Golf Club", city: "Ballybunion", state: "Ireland" },
-  "lahinch": { name: "Lahinch Golf Club", city: "Lahinch", state: "Ireland" },
-  "royal county down": { name: "Royal County Down Golf Club", city: "Newcastle", state: "Northern Ireland" },
-};
-
-function lookupCourse(raw) {
-  const lower = raw.toLowerCase().trim();
-  // Exact or substring match
-  for (const [key, val] of Object.entries(COURSE_DB)) {
-    if (lower === key || lower.includes(key) || key.includes(lower)) {
-      return [val];
-    }
-  }
-  // Partial word match - find all courses that share significant words
-  const words = lower.split(/\s+/).filter(w => w.length > 3);
-  const matches = [];
-  for (const [key, val] of Object.entries(COURSE_DB)) {
-    const score = words.filter(w => key.includes(w)).length;
-    if (score >= 1) matches.push({ ...val, score });
-  }
-  matches.sort((a, b) => b.score - a.score);
-  // Dedupe by name
-  const seen = new Set();
-  return matches.filter(m => { if (seen.has(m.name)) return false; seen.add(m.name); return true; }).slice(0, 4);
-}
-
-function cleanCityQuery(raw) {
-  const abbr = raw.match(/^(.+),\s*([A-Z]{2})$/);
-  if (abbr) return abbr[1].trim();
-  return raw.replace(/,/g, " ").replace(/\s+/g, " ").trim();
-}
-
-async function geocode(cityName) {
-  const q = cleanCityQuery(cityName);
-  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
-  const d = await r.json();
-  if (!d.results || !d.results.length) throw new Error("Location not found. Try just the city name.");
-  return d.results[0];
-}
-
-async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max&hourly=relative_humidity_2m&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
-  const r = await fetch(url);
-  const data = await r.json();
-  if (data.error) throw new Error("Weather data unavailable: " + (data.reason || "unknown error"));
-  if (!data.daily) throw new Error("No weather data returned for this location.");
-  return data;
-}
-
-function processWeather(data) {
-  const d = data.daily;
-  const hourly = data.hourly;
-  return d.time.map((date, i) => {
-    const temp  = (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2;
-    const wind  = d.windspeed_10m_max[i] || 0;
-    const rain  = d.precipitation_probability_max[i] || 0;
-    // Average the 24 hourly humidity readings for this day
-    const hourlySlice = hourly.relative_humidity_2m.slice(i * 24, i * 24 + 24);
-    const humid = hourlySlice.length ? Math.round(hourlySlice.reduce((a,b) => a+b, 0) / hourlySlice.length) : 50;
-    const score = windScore(wind) + rainScore(rain) + tempScore(temp) + humidScore(humid);
-    return { date, temp, wind, rain, humid, score, grade: gradeFromScore(score) };
-  });
+  return `Not ideal. Check the hourly below for a better window today.`;
 }
 
 function renderApp(name, days, query) {
-  document.getElementById("quick-picks").style.display = "none";
+  _days = days;
+  _name = name;
+  _query = query;
+  _selectedDay = 0;
+
+  document.getElementById('quick-picks').style.display = 'none';
   const today = days[0];
   const col = gradeColor(today.grade);
-  const [wLbl,wCls] = factorLabel("wind",  today.wind);
-  const [rLbl,rCls] = factorLabel("rain",  today.rain);
-  const [tLbl,tCls] = factorLabel("temp",  today.temp);
-  const [hLbl,hCls] = factorLabel("humid", today.humid);
+  const [wLbl,wCls] = factorLabel('wind', today.wind);
+  const [rLbl,rCls] = factorLabel('rain', today.rain);
+  const [tLbl,tCls] = factorLabel('temp', today.temp);
+  const [hLbl,hCls] = factorLabel('humid', today.humid);
+  const dateStr = new Date(today.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 
-  const dateStr = new Date(today.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-
-  let stripHTML = "";
-  let lastWeek = 0;
-  for (let i = 0; i < days.length; i++) {
-    const day = days[i];
-    const d = new Date(day.date+"T12:00:00");
-    const weekNum = Math.floor(i / 7);
-    const isFarOut = i >= 7;
-    const gc = gradeColor(day.grade);
-    const opacity = isFarOut ? Math.max(0.38, 1 - (i-7) * 0.04) : 1;
-    if (weekNum !== lastWeek) {
-      stripHTML += `<div class="wk-divider"><div class="wk-line"></div><span class="wk-text">Wk ${weekNum+1}</span><div class="wk-line"></div></div>`;
-      lastWeek = weekNum;
-    }
-    stripHTML += `<div class="day-card ${i===0?"today":""}" style="opacity:${opacity}">
-      <div class="day-name">${DAYS[d.getDay()]}</div>
-      <div class="day-date">${MONTHS[d.getMonth()]} ${d.getDate()}</div>
-      <div class="day-grade" style="color:${gc.text}">${day.grade}</div>
-      ${isFarOut ? '<div class="day-est">est.</div>' : ""}
-    </div>`;
-  }
-
-  document.getElementById("main-content").innerHTML = `
+  document.getElementById('main-content').innerHTML = `
     <div class="location-line">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 11C6 11 2 7.5 2 5a4 4 0 018 0c0 2.5-4 6-4 6z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
-      ${name} &nbsp;·&nbsp; ${dateStr}
+      ${name} &nbsp;·&nbsp; <span id="selected-date">${dateStr}</span>
     </div>
 
     <div class="grade-card">
-      <div class="grade-circle" style="background:${col.bg};color:${col.text};border:2px solid ${col.border}">
-        ${today.grade}
-      </div>
-      <div class="grade-title">${gradeTitle(today.grade)}</div>
-      <div class="grade-desc">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
+      <div class="grade-circle" id="grade-circle" style="background:${col.bg};color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
+      <div class="grade-title" id="grade-title">${gradeTitle(today.grade)}</div>
+      <div class="grade-desc" id="grade-desc">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
       <button id="heart-btn" class="heart-btn" onclick="toggleFavorite(this.dataset.query, this.dataset.label)" data-query="${query||name}" data-label="${name}">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save
       </button>
     </div>
 
+    <div class="section-label">Hourly forecast</div>
+    <div id="hourly-section"></div>
+
     <div class="section-label">Conditions breakdown</div>
     <div class="factors">
       <div class="factor">
-        <div class="factor-top"><span class="factor-name">Wind</span><span class="pill pill-${wCls}">${wLbl}</span></div>
-        <div class="factor-val">${Math.round(today.wind)} mph</div>
-        <div class="factor-bar"><div class="factor-fill" style="width:${Math.min(100,Math.round(today.wind*2.5))}%;background:${barFill(wCls)}"></div></div>
+        <div class="factor-top"><span class="factor-name">Wind</span><span class="pill pill-${wCls}" id="f-wind-pill">${wLbl}</span></div>
+        <div class="factor-val" id="f-wind-val">${Math.round(today.wind)} mph</div>
+        <div class="factor-bar"><div class="factor-fill" id="f-wind-bar" style="width:${Math.min(100,Math.round(today.wind*2.5))}%;background:${barFill(wCls)}"></div></div>
       </div>
       <div class="factor">
-        <div class="factor-top"><span class="factor-name">Rain</span><span class="pill pill-${rCls}">${rLbl}</span></div>
-        <div class="factor-val">${Math.round(today.rain)}%</div>
-        <div class="factor-bar"><div class="factor-fill" style="width:${Math.round(today.rain)}%;background:${barFill(rCls)}"></div></div>
+        <div class="factor-top"><span class="factor-name">Rain</span><span class="pill pill-${rCls}" id="f-rain-pill">${rLbl}</span></div>
+        <div class="factor-val" id="f-rain-val">${Math.round(today.rain)}%</div>
+        <div class="factor-bar"><div class="factor-fill" id="f-rain-bar" style="width:${Math.round(today.rain)}%;background:${barFill(rCls)}"></div></div>
       </div>
       <div class="factor">
-        <div class="factor-top"><span class="factor-name">Temp</span><span class="pill pill-${tCls}">${tLbl}</span></div>
-        <div class="factor-val">${Math.round(today.temp)}°F</div>
-        <div class="factor-bar"><div class="factor-fill" style="width:${Math.min(100,Math.max(0,Math.round(((today.temp-32)/78)*100)))}%;background:${barFill(tCls)}"></div></div>
+        <div class="factor-top"><span class="factor-name">Temp</span><span class="pill pill-${tCls}" id="f-temp-pill">${tLbl}</span></div>
+        <div class="factor-val" id="f-temp-val">${Math.round(today.temp)}°F</div>
+        <div class="factor-bar"><div class="factor-fill" id="f-temp-bar" style="width:${Math.min(100,Math.max(0,Math.round(((today.temp-32)/78)*100)))}%;background:${barFill(tCls)}"></div></div>
       </div>
       <div class="factor">
-        <div class="factor-top"><span class="factor-name">Humidity</span><span class="pill pill-${hCls}">${hLbl}</span></div>
-        <div class="factor-val">${Math.round(today.humid)}%</div>
-        <div class="factor-bar"><div class="factor-fill" style="width:${Math.round(today.humid)}%;background:${barFill(hCls)}"></div></div>
+        <div class="factor-top"><span class="factor-name">Humidity</span><span class="pill pill-${hCls}" id="f-humid-pill">${hLbl}</span></div>
+        <div class="factor-val" id="f-humid-val">${Math.round(today.humid)}%</div>
+        <div class="factor-bar"><div class="factor-fill" id="f-humid-bar" style="width:${Math.round(today.humid)}%;background:${barFill(hCls)}"></div></div>
       </div>
     </div>
 
-    <div class="section-label">16-day outlook</div>
+    <div class="section-label">16-day outlook <span style="font-size:10px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0">— tap any day</span></div>
     <div class="banner" id="banner">
       <p>Forecasts beyond 7 days are estimates and will update as the date gets closer.</p>
       <button onclick="document.getElementById('banner').style.display='none'">Got it</button>
     </div>
-    <div class="scroll-outer"><div class="strip">${stripHTML}</div></div>
+    <div class="scroll-outer"><div class="strip" id="day-strip"></div></div>
   `;
-  // Update heart button state
+
+  renderDayStrip();
+  renderHourlyStrip(0);
   setTimeout(() => updateHeartBtn(query || name), 50);
 }
 
@@ -683,6 +721,7 @@ document.getElementById("city-input").addEventListener("keydown", e => {
 
 // Init
 renderFavorites();
+
 
 </script>
 </body>
