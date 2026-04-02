@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CaddieCast — Golf Weather App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark: #1a3d0a;
+      --green-mid: #27500A;
+      --green-light: #EAF3DE;
+      --green-border: #C0DD97;
+      --blue-dark: #0C447C;
+      --blue-light: #E6F1FB;
+      --blue-border: #B5D4F4;
+      --amber-dark: #633806;
+      --amber-light: #FAEEDA;
+      --amber-border: #FAC775;
+      --red-dark: #791F1F;
+      --red-light: #FCEBEB;
+      --red-border: #F7C1C1;
+      --bg: #f5f4f0;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --text-tertiary: #999;
+      --border: rgba(0,0,0,0.1);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 3rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+    }
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--green-mid); }
+    .tagline {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Search */
+    .search-wrap {
+      max-width: 480px;
+      margin: 0 auto 0.5rem;
+      padding: 0 1rem;
+    }
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+    .search-row input {
+      flex: 1;
+      padding: 13px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 15px;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-row input:focus { border-color: var(--green-mid); }
+    .search-row button {
+      padding: 13px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--green-mid);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .search-row button:hover { background: var(--green-dark); }
+    .search-hint {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    /* Quick picks */
+    .quick-picks {
+      max-width: 480px;
+      margin: 1.25rem auto 0;
+      padding: 0 1rem;
+    }
+    .quick-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .quick-btn {
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .quick-btn:hover { border-color: var(--green-mid); background: var(--green-light); }
+    .quick-btn .flag { margin-right: 6px; }
+
+    /* Main content */
+    .main {
+      max-width: 480px;
+      margin: 1.5rem auto 0;
+      padding: 0 1rem;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.2s steps(3, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      33%  { content: '.'; }
+      66%  { content: '..'; }
+      100% { content: '...'; }
+    }
+
+    /* Error */
+    .error-box {
+      background: var(--red-light);
+      border: 1px solid var(--red-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--red-dark);
+      line-height: 1.6;
+    }
+
+    /* Location line */
+    .location-line {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 1rem;
+    }
+
+    /* Grade card */
+    .grade-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .grade-circle {
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-family: 'DM Serif Display', serif;
+      font-size: 44px;
+    }
+    .grade-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .grade-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+
+    /* Factors grid */
+    .factors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .factor {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .factor-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .factor-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .pill {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .pill-g { background: var(--green-light); color: var(--green-mid); }
+    .pill-w { background: var(--amber-light); color: var(--amber-dark); }
+    .pill-b { background: var(--red-light); color: var(--red-dark); }
+    .factor-val {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .factor-bar {
+      height: 4px;
+      background: #e8e8e4;
+      border-radius: 2px;
+    }
+    .factor-fill { height: 4px; border-radius: 2px; }
+
+    /* Banner */
+    .banner {
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .banner p { font-size: 12px; color: var(--amber-dark); line-height: 1.5; flex: 1; }
+    .banner button {
+      background: none;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber-dark);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+      padding: 0;
+    }
+
+    /* Scroll strip */
+    .scroll-outer {
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-bottom: 1.5rem;
+      padding-bottom: 4px;
+    }
+    .scroll-outer::-webkit-scrollbar { display: none; }
+    .strip {
+      display: flex;
+      gap: 8px;
+      width: max-content;
+    }
+    .day-card {
+      width: 66px;
+      flex-shrink: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 6px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .day-card.today {
+      background: var(--green-light);
+      border-color: var(--green-border);
+    }
+    .day-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+    .day-date { font-size: 10px; color: var(--text-tertiary); margin-bottom: 6px; }
+    .day-grade { font-size: 16px; font-weight: 600; }
+    .day-est { font-size: 9px; color: var(--text-tertiary); margin-top: 3px; }
+    .wk-divider {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 2px;
+      min-height: 95px;
+    }
+    .wk-line { width: 1px; flex: 1; background: var(--border); }
+    .wk-text {
+      font-size: 9px;
+      color: var(--text-tertiary);
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      padding: 3px 0;
+      letter-spacing: 0.3px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+    .footer a { color: var(--green-mid); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">caddie<span>cast</span></div>
+  <div class="tagline">Is it a golf day? Let's find out.</div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-row">
+    <input id="city-input" type="text" placeholder="City or location..." autocomplete="off" />
+    <button onclick="searchCity()">Check it</button>
+  </div>
+  <div class="search-hint">Try "Scottsdale AZ", "Monterey CA", "Chicago", "St Andrews Scotland"</div>
+</div>
+
+<div class="quick-picks" id="quick-picks">
+  <div class="quick-label">Popular courses</div>
+  <div class="quick-grid">
+    <button class="quick-btn" onclick="loadQuick('Scottsdale, Arizona')"><span class="flag">🌵</span>Scottsdale, AZ</button>
+    <button class="quick-btn" onclick="loadQuick('Monterey, California')"><span class="flag">🌊</span>Monterey, CA</button>
+    <button class="quick-btn" onclick="loadQuick('St Andrews, Scotland')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
+    <button class="quick-btn" onclick="loadQuick('Augusta, Georgia')"><span class="flag">🍑</span>Augusta, GA</button>
+    <button class="quick-btn" onclick="loadQuick('Pinehurst, North Carolina')"><span class="flag">⛳</span>Pinehurst, NC</button>
+    <button class="quick-btn" onclick="loadQuick('Maui, Hawaii')"><span class="flag">🌺</span>Maui, HI</button>
+  </div>
+</div>
+
+<div class="main" id="main-content"></div>
+
+<div class="footer">
+  Weather data from <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Free & open source
+</div>
+
+<script>
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function gradeFromScore(s) {
+  if (s >= 93) return "A+"; if (s >= 87) return "A"; if (s >= 83) return "A-";
+  if (s >= 80) return "B+"; if (s >= 75) return "B"; if (s >= 70) return "B-";
+  if (s >= 67) return "C+"; if (s >= 63) return "C"; if (s >= 60) return "C-";
+  if (s >= 55) return "D+"; if (s >= 50) return "D"; return "F";
+}
+
+function gradeColor(g) {
+  const c = g[0];
+  if (c === "A") return { text: "#1a3d0a", bg: "#EAF3DE", border: "#C0DD97" };
+  if (c === "B") return { text: "#0C447C", bg: "#E6F1FB", border: "#B5D4F4" };
+  if (c === "C") return { text: "#633806", bg: "#FAEEDA", border: "#FAC775" };
+  return { text: "#791F1F", bg: "#FCEBEB", border: "#F7C1C1" };
+}
+
+function windScore(v)  { if(v<=5)return 25; if(v<=10)return 23; if(v<=15)return 19; if(v<=20)return 14; if(v<=25)return 8; if(v<=35)return 3; return 0; }
+function rainScore(v)  { if(v<=10)return 25; if(v<=20)return 21; if(v<=35)return 15; if(v<=50)return 8; if(v<=70)return 3; return 0; }
+function tempScore(v)  { if(v>=62&&v<=82)return 25; if(v>=55&&v<=90)return 21; if(v>=45&&v<=95)return 15; if(v>=38&&v<=100)return 8; return 2; }
+function humidScore(v) { if(v<=45)return 25; if(v<=60)return 21; if(v<=72)return 15; if(v<=85)return 8; return 3; }
+
+function factorLabel(type, val) {
+  if (type==="wind")  { if(val<=8)return["Low","g"]; if(val<=18)return["Breezy","w"]; return["Strong","b"]; }
+  if (type==="rain")  { if(val<=15)return["None","g"]; if(val<=40)return["Possible","w"]; return["Likely","b"]; }
+  if (type==="temp")  { if(val>=62&&val<=82)return["Perfect","g"]; if(val>=50&&val<=92)return["Ok","w"]; return["Rough","b"]; }
+  if (type==="humid") { if(val<=50)return["Comfortable","g"]; if(val<=72)return["Moderate","w"]; return["Muggy","b"]; }
+}
+
+function barFill(cls) { return cls==="g"?"#639922":cls==="w"?"#EF9F27":"#E24B4A"; }
+
+function gradeTitle(g) {
+  const c = g[0];
+  if (c==="A") return "Great day to play";
+  if (c==="B") return "Good enough to play";
+  if (c==="C") return "Marginal — your call";
+  return "Skip it today";
+}
+
+function gradeDesc(g, wind, rain, temp) {
+  const c = g[0];
+  if (c==="A") return `Clear skies, light wind, and ${Math.round(temp)}°F. Get out there.`;
+  if (c==="B") {
+    if (wind > 15) return `Playable but breezy at ${Math.round(wind)} mph. Factor in the wind.`;
+    if (rain > 30) return `Some rain possible. Check back closer to tee time.`;
+    return `Decent conditions. A solid round is on the cards.`;
+  }
+  if (c==="C") return `Marginal day. Playable if you don't mind grinding it out.`;
+  return `Not ideal. Check the forecast below for a better window.`;
+}
+
+async function geocode(q) {
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
+  const d = await r.json();
+  if (!d.results || !d.results.length) throw new Error("Location not found. Try a nearby city name.");
+  return d.results[0];
+}
+
+async function fetchWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,relativehumidity_2m_max&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Weather data unavailable. Try again.");
+  return r.json();
+}
+
+function processWeather(data) {
+  const d = data.daily;
+  return d.time.map((date, i) => {
+    const temp  = (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2;
+    const wind  = d.windspeed_10m_max[i] || 0;
+    const rain  = d.precipitation_probability_max[i] || 0;
+    const humid = d.relativehumidity_2m_max[i] || 50;
+    const score = windScore(wind) + rainScore(rain) + tempScore(temp) + humidScore(humid);
+    return { date, temp, wind, rain, humid, score, grade: gradeFromScore(score) };
+  });
+}
+
+function renderApp(name, days) {
+  document.getElementById("quick-picks").style.display = "none";
+  const today = days[0];
+  const col = gradeColor(today.grade);
+  const [wLbl,wCls] = factorLabel("wind",  today.wind);
+  const [rLbl,rCls] = factorLabel("rain",  today.rain);
+  const [tLbl,tCls] = factorLabel("temp",  today.temp);
+  const [hLbl,hCls] = factorLabel("humid", today.humid);
+
+  const dateStr = new Date(today.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+
+  let stripHTML = "";
+  let lastWeek = 0;
+  for (let i = 0; i < days.length; i++) {
+    const day = days[i];
+    const d = new Date(day.date+"T12:00:00");
+    const weekNum = Math.floor(i / 7);
+    const isFarOut = i >= 7;
+    const gc = gradeColor(day.grade);
+    const opacity = isFarOut ? Math.max(0.38, 1 - (i-7) * 0.04) : 1;
+    if (weekNum !== lastWeek) {
+      stripHTML += `<div class="wk-divider"><div class="wk-line"></div><span class="wk-text">Wk ${weekNum+1}</span><div class="wk-line"></div></div>`;
+      lastWeek = weekNum;
+    }
+    stripHTML += `<div class="day-card ${i===0?"today":""}" style="opacity:${opacity}">
+      <div class="day-name">${DAYS[d.getDay()]}</div>
+      <div class="day-date">${MONTHS[d.getMonth()]} ${d.getDate()}</div>
+      <div class="day-grade" style="color:${gc.text}">${day.grade}</div>
+      ${isFarOut ? '<div class="day-est">est.</div>' : ""}
+    </div>`;
+  }
+
+  document.getElementById("main-content").innerHTML = `
+    <div class="location-line">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 11C6 11 2 7.5 2 5a4 4 0 018 0c0 2.5-4 6-4 6z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+      ${name} &nbsp;·&nbsp; ${dateStr}
+    </div>
+
+    <div class="grade-card">
+      <div class="grade-circle" style="background:${col.bg};color:${col.text};border:2px solid ${col.border}">
+        ${today.grade}
+      </div>
+      <div class="grade-title">${gradeTitle(today.grade)}</div>
+      <div class="grade-desc">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
+    </div>
+
+    <div class="section-label">Conditions breakdown</div>
+    <div class="factors">
+      <div class="factor">
+        <div class="factor-top"><span class="factor-name">Wind</span><span class="pill pill-${wCls}">${wLbl}</span></div>
+        <div class="factor-val">${Math.round(today.wind)} mph</div>
+        <div class="factor-bar"><div class="factor-fill" style="width:${Math.min(100,Math.round(today.wind*2.5))}%;background:${barFill(wCls)}"></div></div>
+      </div>
+      <div class="factor">
+        <div class="factor-top"><span class="factor-name">Rain</span><span class="pill pill-${rCls}">${rLbl}</span></div>
+        <div class="factor-val">${Math.round(today.rain)}%</div>
+        <div class="factor-bar"><div class="factor-fill" style="width:${Math.round(today.rain)}%;background:${barFill(rCls)}"></div></div>
+      </div>
+      <div class="factor">
+        <div class="factor-top"><span class="factor-name">Temp</span><span class="pill pill-${tCls}">${tLbl}</span></div>
+        <div class="factor-val">${Math.round(today.temp)}°F</div>
+        <div class="factor-bar"><div class="factor-fill" style="width:${Math.min(100,Math.max(0,Math.round(((today.temp-32)/78)*100)))}%;background:${barFill(tCls)}"></div></div>
+      </div>
+      <div class="factor">
+        <div class="factor-top"><span class="factor-name">Humidity</span><span class="pill pill-${hCls}">${hLbl}</span></div>
+        <div class="factor-val">${Math.round(today.humid)}%</div>
+        <div class="factor-bar"><div class="factor-fill" style="width:${Math.round(today.humid)}%;background:${barFill(hCls)}"></div></div>
+      </div>
+    </div>
+
+    <div class="section-label">16-day outlook</div>
+    <div class="banner" id="banner">
+      <p>Forecasts beyond 7 days are estimates and will update as the date gets closer.</p>
+      <button onclick="document.getElementById('banner').style.display='none'">Got it</button>
+    </div>
+    <div class="scroll-outer"><div class="strip">${stripHTML}</div></div>
+  `;
+}
+
+async function run(query, displayName) {
+  const mc = document.getElementById("main-content");
+  mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
+  document.getElementById("quick-picks").style.display = "none";
+  try {
+    const loc = await geocode(query);
+    const weather = await fetchWeather(loc.latitude, loc.longitude);
+    const days = processWeather(weather);
+    const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
+    renderApp(name, days);
+  } catch(e) {
+    document.getElementById("quick-picks").style.display = "block";
+    mc.innerHTML = `<div class="error-box">${e.message}</div>`;
+  }
+}
+
+function searchCity() {
+  const val = document.getElementById("city-input").value.trim();
+  if (!val) return;
+  run(val, null);
+}
+
+function loadQuick(q) {
+  document.getElementById("city-input").value = q;
+  run(q, null);
+}
+
+document.getElementById("city-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") searchCity();
+});
+</script>
+</body>
+</html>
