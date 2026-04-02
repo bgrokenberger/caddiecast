@@ -566,12 +566,12 @@ function renderHourlyStrip(dayIdx) {
     if (!scroller) return;
     const now = new Date();
     const currentHour = dayIdx === 0 ? now.getHours() : 8;
-    const curCard = document.getElementById('hr-' + dayIdx + '-' + currentHour)
-      || document.getElementById('hr-' + dayIdx + '-8');
-    if (!curCard) return;
-    // Scroll so current card is 2nd visible: subtract 1 full card + gap from its offsetLeft
-    const cardStep = curCard.offsetWidth + 8;
-    scroller.scrollLeft = Math.max(0, curCard.offsetLeft - cardStep);
+    // Count how many cards come before current hour in the strip (hours 6 to current-1)
+    // Each card is 66px wide + 8px gap = 74px per slot
+    const CARD_STEP = 74;
+    const firstHour = 6;
+    const cardsBefore = Math.max(0, currentHour - firstHour - 1); // show 1 past card
+    scroller.scrollLeft = cardsBefore * CARD_STEP;
   }, 80);
 }
 
