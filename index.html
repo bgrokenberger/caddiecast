@@ -570,7 +570,7 @@ function renderHourlyStrip(dayIdx) {
     // Each card is 66px wide + 8px gap = 74px per slot
     const CARD_STEP = 74;
     const firstHour = 6;
-    const cardsBefore = Math.max(0, currentHour - firstHour - 1); // show 1 past card
+    const cardsBefore = Math.max(0, currentHour - firstHour - 1); // prev hour = 1st card, current = 2nd
     scroller.scrollLeft = cardsBefore * CARD_STEP;
   }, 80);
 }
