@@ -386,10 +386,12 @@
       </label>
     </div>
     <div class="share-preview" id="share-preview"></div>
+    <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:8px;text-align:center;">
+      On mobile, "Share" opens your share sheet. On desktop, it copies the link.
+    </div>
     <div class="share-btns">
       <button class="share-btn-copy" onclick="copyShareLink()">Copy link</button>
-      <button class="share-btn-copy" onclick="downloadCard()" style="flex:1">Save card</button>
-      <button class="share-btn-main" onclick="shareCard()">Share</button>
+      <button class="share-btn-main" onclick="shareCard()">Share ↗</button>
     </div>
   </div>
 </div>
@@ -1063,6 +1065,8 @@ async function runCity(cityQuery, displayName) {
     const name = displayName || (loc.name + (loc.admin1 ? ', ' + loc.admin1 : ''));
     mc.innerHTML = '';
     window._lastResolvedCity = loc.name + (loc.admin1 ? ', ' + loc.admin1 : '');
+    window._lastResolvedLat = loc.latitude;
+    window._lastResolvedLon = loc.longitude;
     renderApp(name, days, cityQuery);
   } catch(e) {
     mc.innerHTML = '';
@@ -1123,6 +1127,8 @@ async function run(query, displayName, cityOverride) {
     const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
     mc.innerHTML = "";
     window._lastResolvedCity = loc.name + (loc.admin1 ? ", " + loc.admin1 : "");
+    window._lastResolvedLat = loc.latitude;
+    window._lastResolvedLon = loc.longitude;
     renderApp(name, days, query);
   } catch(e) {
     mc.innerHTML = "";
@@ -1173,6 +1179,8 @@ function autoDetectLocation() {
         const displayName = city + (state ? ', ' + state : '');
         document.getElementById('city-input').value = displayName;
         window._lastResolvedCity = city;
+        window._lastResolvedLat = latitude;
+        window._lastResolvedLon = longitude;
         const weather = await fetchWeather(latitude, longitude);
         const days = processWeather(weather);
         document.getElementById('main-content').innerHTML = '';
@@ -1289,7 +1297,10 @@ function renderSharePreview() {
     }).join('') + `</div>`;
   }
 
-  html += `<div class="sc-footer">caddiecast.vercel.app</div></div>`;
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.15)">
+      <span style="font-size:10px;color:rgba(255,255,255,0.4)">caddiecast.vercel.app</span>
+      <span style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.75);background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:999px">View full forecast →</span>
+    </div></div>`;
   document.getElementById('share-preview').innerHTML = html;
 }
 
@@ -1297,9 +1308,7 @@ async function copyShareLink() {
   const day = _days[_shareDay];
   if (!day) return;
   // Use resolved city name for reliable geocoding on the other end
-  const cityForUrl = window._lastResolvedCity || _name;
-  const loc = encodeURIComponent(cityForUrl);
-  const url = `${window.location.origin}${window.location.pathname}?loc=${loc}&date=${day.date}`;
+  const url = buildShareUrl(day.date);
   try {
     await navigator.clipboard.writeText(url);
     const btn = document.querySelector('.share-btn-copy');
@@ -1308,6 +1317,16 @@ async function copyShareLink() {
   } catch(e) {
     prompt('Copy this link:', url);
   }
+}
+
+function buildShareUrl(date) {
+  const base = window.location.origin + window.location.pathname;
+  // Prefer lat/lon for precision, fallback to city name
+  if (window._lastResolvedLat && window._lastResolvedLon) {
+    return `${base}?lat=${window._lastResolvedLat.toFixed(4)}&lon=${window._lastResolvedLon.toFixed(4)}&name=${encodeURIComponent(_name)}&date=${date}`;
+  }
+  const city = encodeURIComponent(window._lastResolvedCity || _name);
+  return `${base}?loc=${city}&date=${date}`;
 }
 
 async function downloadCard() {
@@ -1340,9 +1359,7 @@ async function downloadCard() {
 async function shareCard() {
   const day = _days[_shareDay];
   if (!day) return;
-  const cityForUrl = window._lastResolvedCity || _name;
-  const loc = encodeURIComponent(cityForUrl);
-  const url = `${window.location.origin}${window.location.pathname}?loc=${loc}&date=${day.date}`;
+  const url = buildShareUrl(day.date);
   const dt = new Date(day.date + 'T12:00:00');
   const dateStr = DAYS[dt.getDay()] + ', ' + MONTHS[dt.getMonth()] + ' ' + dt.getDate();
   const text = `⛳ ${_name} · ${dateStr}\nGolf forecast: ${day.grade} — ${gradeTitle(day.grade)}\n${day.bestWindow ? 'Best window: ' + day.bestWindow.label : ''}\n\n${url}`;
@@ -1366,25 +1383,53 @@ async function shareCard() {
 // ── Handle ?loc= and ?date= URL params on load ────────────
 (function handleUrlParams() {
   const params = new URLSearchParams(window.location.search);
+  const lat = params.get('lat');
+  const lon = params.get('lon');
+  const name = params.get('name');
   const loc = params.get('loc');
   const date = params.get('date');
-  if (loc) {
+
+  async function afterLoad() {
+    if (date && _days.length) {
+      const idx = _days.findIndex(d => d.date === date);
+      if (idx >= 0) {
+        selectDay(idx);
+        setTimeout(() => {
+          const dayCard = document.querySelectorAll('.day-card')[idx];
+          if (dayCard) dayCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 200);
+      }
+    }
+  }
+
+  if (lat && lon) {
+    // Most reliable: use exact coordinates
+    const displayName = name ? decodeURIComponent(name) : `${parseFloat(lat).toFixed(2)}, ${parseFloat(lon).toFixed(2)}`;
+    document.getElementById('city-input').value = displayName;
+    setTimeout(async () => {
+      const mc = document.getElementById('main-content');
+      mc.innerHTML = '<div class="loading">Fetching forecast<span class="loading-dots"></span></div>';
+      document.getElementById('quick-picks').style.display = 'none';
+      try {
+        window._lastResolvedLat = parseFloat(lat);
+        window._lastResolvedLon = parseFloat(lon);
+        window._lastResolvedCity = displayName;
+        const weather = await fetchWeather(parseFloat(lat), parseFloat(lon));
+        const days = processWeather(weather);
+        mc.innerHTML = '';
+        _name = displayName;
+        renderApp(displayName, days, displayName);
+        await afterLoad();
+      } catch(e) {
+        mc.innerHTML = '<div class="error-box">Couldn\'t load forecast for this location.</div>';
+      }
+    }, 150);
+  } else if (loc) {
     const decoded = decodeURIComponent(loc);
     document.getElementById('city-input').value = decoded;
     setTimeout(async () => {
       await run(decoded, null);
-      // After run completes _days is populated - now find and select the date
-      if (date && _days.length) {
-        const idx = _days.findIndex(d => d.date === date);
-        if (idx >= 0) {
-          selectDay(idx);
-          // Scroll the day strip to show selected day
-          setTimeout(() => {
-            const dayCard = document.querySelectorAll('.day-card')[idx];
-            if (dayCard) dayCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-          }, 200);
-        }
-      }
+      await afterLoad();
     }, 150);
   }
 })();
