@@ -551,6 +551,28 @@ function bestWindow(hours) {
 }
 
 
+// ── Overpass API course lookup ───────────────────────────
+async function searchCourseOverpass(query) {
+  const escaped = query.replace(/["'\\]/g, '').trim();
+  const overpassQuery = `[out:json][timeout:10];(node["leisure"="golf_course"]["name"~"${escaped}",i];way["leisure"="golf_course"]["name"~"${escaped}",i];relation["leisure"="golf_course"]["name"~"${escaped}",i];);out center 8;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'data=' + encodeURIComponent(overpassQuery)
+  });
+  if (!res.ok) throw new Error('Overpass unavailable');
+  const data = await res.json();
+  if (!data.elements || !data.elements.length) return [];
+  return data.elements.map(el => {
+    const lat = el.center ? el.center.lat : el.lat;
+    const lon = el.center ? el.center.lon : el.lon;
+    const name = el.tags && el.tags.name ? el.tags.name : query;
+    const city = (el.tags && (el.tags['addr:city'] || el.tags['addr:suburb'])) || '';
+    const state = (el.tags && (el.tags['addr:state'] || el.tags['addr:country'])) || '';
+    return { name, city, state, lat, lon };
+  }).filter(r => r.lat && r.lon);
+}
+
 // ── Course detection ──────────────────────────────────────
 function looksLikeCourse(q) {
   const lower = q.toLowerCase();
@@ -1318,29 +1340,68 @@ async function run(query, displayName, cityOverride) {
   inlineErr.innerHTML = "";
   document.getElementById("quick-picks").style.display = "none";
 
-  // If it looks like a course, check our course database
+  // If it looks like a course — try Overpass first, then local DB, then geocode
   if (!cityOverride && looksLikeCourse(query)) {
+    mc.innerHTML = `<div class="loading">Looking up course<span class="loading-dots"></span></div>`;
+    try {
+      const overpassResults = await searchCourseOverpass(query);
+      if (overpassResults.length === 1) {
+        // Single match — go straight to weather using exact coordinates
+        const course = overpassResults[0];
+        const label = course.name + (course.city ? ' — ' + course.city + (course.state ? ', ' + course.state : '') : '');
+        mc.innerHTML = '';
+        window._lastResolvedCity = course.city || course.name;
+        window._lastResolvedLat = course.lat;
+        window._lastResolvedLon = course.lon;
+        _name = label;
+        const weather = await fetchWeather(course.lat, course.lon);
+        const days = processWeather(weather);
+        renderApp(label, days, query);
+        return;
+      } else if (overpassResults.length > 1) {
+        // Multiple matches — show picker
+        mc.innerHTML = '';
+        document.getElementById('quick-picks').style.display = 'block';
+        inlineErr.style.display = 'block';
+        const chips = overpassResults.slice(0, 5).map(c => {
+          const label = c.name + (c.city ? ' — ' + c.city + (c.state ? ', ' + c.state : '') : '');
+          const safe = label.replace(/'/g, "\'");
+          return `<button class="chip" onclick="runLatLon(${c.lat}, ${c.lon}, '${safe}')">${c.name}${c.city ? ' <span style="opacity:0.6;font-size:11px">' + c.city + '</span>' : ''}</button>`;
+        }).join('');
+        inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
+          <p style="color:var(--blue-dark)">Found ${overpassResults.length} matches — which one?</p>
+          <div class="suggestion-chips">${chips}</div>
+        </div>`;
+        return;
+      }
+    } catch(e) {
+      // Overpass failed — fall through to local DB
+    }
+
+    // Local DB fallback
     const matches = lookupCourse(query);
     if (matches.length === 1) {
       const course = matches[0];
-      const label = course.name + " — " + course.city + ", " + course.state;
+      const label = course.name + ' — ' + course.city + ', ' + course.state;
+      mc.innerHTML = '';
       return run(course.city, label, true);
     } else if (matches.length > 1) {
-      mc.innerHTML = "";
-      document.getElementById("quick-picks").style.display = "block";
-      inlineErr.style.display = "block";
+      mc.innerHTML = '';
+      document.getElementById('quick-picks').style.display = 'block';
+      inlineErr.style.display = 'block';
       const chips = matches.map(c => {
-        const label = c.name + " — " + c.city + ", " + c.state;
+        const label = c.name + ' — ' + c.city + ', ' + c.state;
         const safe = label.replace(/'/g, "\'");
         return `<button class="chip" onclick="run('${c.city}', '${safe}', true)">${c.name} <span style="opacity:0.6;font-size:11px">${c.city}, ${c.state}</span></button>`;
-      }).join("");
+      }).join('');
       inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
         <p style="color:var(--blue-dark)">Found a few matches — which one?</p>
         <div class="suggestion-chips">${chips}</div>
       </div>`;
-      inlineErr.style.display = "block";
       return;
     }
+    // No course found — fall through to geocode below
+    mc.innerHTML = '';
   }
 
   mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
@@ -1348,23 +1409,44 @@ async function run(query, displayName, cityOverride) {
     const loc = await geocode(query);
     const weather = await fetchWeather(loc.latitude, loc.longitude);
     const days = processWeather(weather);
-    const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
-    mc.innerHTML = "";
-    window._lastResolvedCity = loc.name + (loc.admin1 ? ", " + loc.admin1 : "");
+    const name = displayName || (loc.name + (loc.admin1 ? ', ' + loc.admin1 : ''));
+    mc.innerHTML = '';
+    window._lastResolvedCity = loc.name + (loc.admin1 ? ', ' + loc.admin1 : '');
     window._lastResolvedLat = loc.latitude;
     window._lastResolvedLon = loc.longitude;
     renderApp(name, days, query);
   } catch(e) {
-    mc.innerHTML = "";
-    document.getElementById("quick-picks").style.display = "block";
-    const suggestions = ["Scottsdale", "Chicago", "Monterey", "St Andrews", "Augusta", "Pinehurst"];
-    const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join("");
-    inlineErr.style.display = "block";
+    mc.innerHTML = '';
+    document.getElementById('quick-picks').style.display = 'block';
+    const suggestions = ['Scottsdale', 'Chicago', 'Monterey', 'St Andrews', 'Augusta', 'Pinehurst'];
+    const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join('');
+    inlineErr.style.display = 'block';
     const errMsg = e.message && e.message.length < 120 ? e.message : "Couldn't load weather for that location.";
     inlineErr.innerHTML = `<div class="inline-error">
       <p>${errMsg} Try one of these:</p>
       <div class="suggestion-chips">${chips}</div>
     </div>`;
+  }
+}
+
+// Helper: run directly from lat/lon (used by Overpass multi-match picker)
+async function runLatLon(lat, lon, displayName) {
+  const mc = document.getElementById('main-content');
+  const inlineErr = document.getElementById('inline-error');
+  inlineErr.style.display = 'none';
+  document.getElementById('quick-picks').style.display = 'none';
+  mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
+  try {
+    window._lastResolvedLat = lat;
+    window._lastResolvedLon = lon;
+    window._lastResolvedCity = displayName;
+    document.getElementById('city-input').value = displayName;
+    const weather = await fetchWeather(lat, lon);
+    const days = processWeather(weather);
+    mc.innerHTML = '';
+    renderApp(displayName, days, displayName);
+  } catch(e) {
+    mc.innerHTML = '<div class="error-box">Couldn\'t load forecast for that course.</div>';
   }
 }
 
