@@ -600,7 +600,10 @@ function toggleFavorite(query, label) {
   if (isFavorite(query)) {
     favs = favs.filter(f => f.query !== query);
   } else {
-    favs.unshift({ query, label });
+    // Store both the geocodable city query and the display label
+    // _lastCity is set by renderApp so we know what city was actually resolved
+    const cityQuery = window._lastResolvedCity || query;
+    favs.unshift({ query, label, cityQuery });
     if (favs.length > 20) favs = favs.slice(0, 20);
   }
   saveFavorites(favs);
@@ -637,7 +640,32 @@ function removeFav(query) {
 }
 function loadFav(query, label) {
   document.getElementById('city-input').value = label;
-  run(query, label, true);
+  // Use resolved city if stored, fallback to query
+  const favItem = getFavorites().find(f => f.query === query || f.label === label);
+  runCity(favItem ? (favItem.cityQuery || query) : query, label);
+}
+// Direct city run - skips course detection entirely
+async function runCity(cityQuery, displayName) {
+  const mc = document.getElementById('main-content');
+  const inlineErr = document.getElementById('inline-error');
+  inlineErr.style.display = 'none';
+  inlineErr.innerHTML = '';
+  document.getElementById('quick-picks').style.display = 'none';
+  mc.innerHTML = '<div class="loading">Fetching forecast<span class="loading-dots"></span></div>';
+  try {
+    const loc = await geocode(cityQuery);
+    const weather = await fetchWeather(loc.latitude, loc.longitude);
+    const days = processWeather(weather);
+    const name = displayName || (loc.name + (loc.admin1 ? ', ' + loc.admin1 : ''));
+    mc.innerHTML = '';
+    window._lastResolvedCity = loc.name + (loc.admin1 ? ', ' + loc.admin1 : '');
+    renderApp(name, days, cityQuery);
+  } catch(e) {
+    mc.innerHTML = '';
+    document.getElementById('quick-picks').style.display = 'block';
+    inlineErr.style.display = 'block';
+    inlineErr.innerHTML = '<div class="inline-error"><p>Couldn\'t load that location. Try searching again.</p></div>';
+  }
 }
 function updateHeartBtn(query) {
   const btn = document.getElementById('heart-btn');
@@ -690,6 +718,7 @@ async function run(query, displayName, cityOverride) {
     const days = processWeather(weather);
     const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
     mc.innerHTML = "";
+    window._lastResolvedCity = loc.name + (loc.admin1 ? ", " + loc.admin1 : "");
     renderApp(name, days, query);
   } catch(e) {
     mc.innerHTML = "";
@@ -697,8 +726,9 @@ async function run(query, displayName, cityOverride) {
     const suggestions = ["Scottsdale", "Chicago", "Monterey", "St Andrews", "Augusta", "Pinehurst"];
     const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join("");
     inlineErr.style.display = "block";
+    const errMsg = e.message && e.message.length < 120 ? e.message : "Couldn't load weather for that location.";
     inlineErr.innerHTML = `<div class="inline-error">
-      <p>Couldn't find that. Try a city name or a well-known course name:</p>
+      <p>${errMsg} Try one of these:</p>
       <div class="suggestion-chips">${chips}</div>
     </div>`;
   }
