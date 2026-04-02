@@ -49,7 +49,11 @@
       font-family: 'DM Sans', sans-serif; flex-shrink: 0;
     }
     .fav-remove:hover { background: var(--red-light); color: var(--red-dark); }
-    .fav-empty { font-size: 12px; color: var(--text-tertiary); line-height: 1.6; padding: 4px 0; }
+    .fav-empty { font-size: 12px; color: var(--text-tertiary); line-height: 1.7; padding: 4px 0; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+    .sidebar-popular-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .sidebar-quick-btn { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; text-align: left; padding: 7px 8px; border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); cursor: pointer; transition: background 0.15s; }
+    .sidebar-quick-btn:hover { background: var(--green-light); color: var(--green-mid); }
 
     /* ── Main column ── */
     .main-col { flex: 1; min-width: 0; padding: 0 0 3rem; }
@@ -59,18 +63,17 @@
     .tagline { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
 
     /* ── Search ── */
-    .search-wrap { max-width: 480px; margin: 0 auto 0.5rem; padding: 0 1rem; }
-    .search-row { display: flex; gap: 8px; }
+    .search-wrap { max-width: 520px; margin: 0 auto 0.75rem; padding: 0 1rem; }
+    .search-row { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1.5px solid var(--border); border-radius: 999px; padding: 6px 6px 6px 14px; transition: border-color 0.2s; }
+    .search-row:focus-within { border-color: var(--green-mid); }
     .search-row input {
-      flex: 1; padding: 13px 16px; border-radius: var(--radius-sm);
-      border: 1px solid var(--border); font-size: 15px; font-family: 'DM Sans', sans-serif;
-      background: var(--card); color: var(--text); outline: none; transition: border-color 0.2s;
+      flex: 1; border: none; outline: none; font-size: 15px; font-family: 'DM Sans', sans-serif;
+      background: transparent; color: var(--text); padding: 6px 0;
     }
-    .search-row input:focus { border-color: var(--green-mid); }
     .search-row button {
-      padding: 13px 20px; border-radius: var(--radius-sm); border: none;
-      background: var(--green-mid); color: #fff; font-size: 15px; font-weight: 600;
-      font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s;
+      padding: 10px 20px; border-radius: 999px; border: none;
+      background: var(--green-mid); color: #fff; font-size: 14px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s; white-space: nowrap;
     }
     .search-row button:hover { background: var(--green-dark); }
     .search-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; text-align: center; }
@@ -118,8 +121,8 @@
     .location-line { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; margin-bottom: 1rem; }
 
     /* ── Grade card ── */
-    .grade-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 1.5rem 1.5rem; text-align: center; margin-bottom: 1rem; }
-    .grade-circle { width: 108px; height: 108px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-family: 'DM Serif Display', serif; font-size: 44px; }
+    .grade-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 1.5rem 1.5rem; text-align: center; margin-bottom: 1rem; transition: background 0.3s, border-color 0.3s; }
+    .grade-circle { width: 108px; height: 108px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-family: 'DM Serif Display', serif; font-size: 44px; transition: all 0.3s; }
     .grade-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
     .grade-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem; }
     .heart-btn {
@@ -135,7 +138,8 @@
 
     /* ── Factors ── */
     .factors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
-    .factor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+    .factor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; transition: border-color 0.15s; }
+    .factor:hover { border-color: var(--green-border); }
     .factor-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .factor-name { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
     .pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
@@ -270,32 +274,31 @@
     /* ── Hourly strip ── */
     .hr-strip { display: flex; gap: 8px; width: max-content; padding-bottom: 4px; }
     .hr-card {
-      width: 58px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 8px 4px; text-align: center;
-      cursor: default; transition: opacity 0.2s;
+      width: 66px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 6px 8px; text-align: center;
+      cursor: pointer; transition: border-color 0.15s;
     }
-    .hr-card.hr-past { opacity: 0.35; }
+    .hr-card.hr-past { opacity: 0.32; }
     .hr-card.hr-selected { border-color: var(--green-mid); border-width: 2px; background: var(--green-light); }
-    .hr-card { cursor: pointer; transition: border-color 0.15s; }
     .hr-card:hover:not(.hr-past) { border-color: var(--green-border); }
-    .hr-time { font-size: 10px; color: var(--text-tertiary); margin-bottom: 5px; }
+    .hr-time { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }
     .hr-grade {
-      font-size: 13px; font-weight: 600; padding: 3px 4px; border-radius: 6px;
-      border: 1px solid; margin-bottom: 5px; display: block;
+      font-size: 15px; font-weight: 600; padding: 4px 4px; border-radius: 8px;
+      border: 1px solid; margin-bottom: 7px; display: block; line-height: 1;
     }
-    .hr-temp { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .hr-temp { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
     .hr-rain { font-size: 11px; margin-bottom: 2px; }
     .hr-wind { font-size: 10px; color: var(--text-tertiary); }
 
     /* ── Best window ── */
     .best-window {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+      background: var(--green-light); border: 1px solid var(--green-border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
     }
-    .bw-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
-    .bw-time { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
-    .bw-grade { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+    .bw-label { font-size: 10px; font-weight: 600; color: #3B6D11; text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
+    .bw-time { font-size: 15px; font-weight: 600; color: var(--green-mid); flex: 1; }
+    .bw-grade { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
 
     /* ── Day strip selected state ── */
     .day-card { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
@@ -313,6 +316,15 @@
     <div class="sidebar-logo">caddie<span>cast</span></div>
     <div class="sidebar-section-label">My Favorites</div>
     <div id="fav-sidebar"><div class="fav-list"></div></div>
+    <div id="sidebar-popular" style="margin-top:1rem;display:none">
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-popular-label">Popular</div>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Scottsdale')">🌵 Scottsdale, AZ</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Monterey')">🌊 Monterey, CA</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('St Andrews')">🏴󠁧󠁢󠁳󠁣󠁴󠁿 St Andrews</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Augusta')">🍑 Augusta, GA</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Pinehurst')">⛳ Pinehurst, NC</button>
+    </div>
   </aside>
 
   <!-- Main column -->
@@ -324,7 +336,8 @@
 
     <div class="search-wrap">
       <div class="search-row">
-        <input id="city-input" type="text" placeholder="City, course, or zip..." autocomplete="off" />
+        <button id="locate-btn" onclick="autoDetectLocation()" title="Use my location" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;opacity:0.45;transition:opacity 0.15s;padding:0;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='0.45'">📍</button>
+        <input id="city-input" type="text" placeholder="City, course, or zip code..." autocomplete="off" />
         <button onclick="searchCity()">Check it</button>
       </div>
       <div class="search-hint">Try "Scottsdale", "Pebble Beach", "Valley Club of Montecito"</div>
@@ -853,11 +866,16 @@ function selectDay(idx) {
   const isFarOut = idx >= 7;
 
   // Update grade card
-  document.getElementById('grade-circle').style.background = col.bg;
+  const gradeCard = document.getElementById('grade-card');
+  if (gradeCard) { gradeCard.style.background = col.bg; gradeCard.style.borderColor = col.border; }
+  document.getElementById('grade-circle').style.background = 'white';
   document.getElementById('grade-circle').style.color = col.text;
   document.getElementById('grade-circle').style.border = `2px solid ${col.border}`;
   document.getElementById('grade-circle').textContent = day.grade;
+  document.getElementById('grade-title').style.color = col.text;
   document.getElementById('grade-title').textContent = gradeTitle(day.grade);
+  document.getElementById('grade-desc').style.color = col.text;
+  document.getElementById('grade-desc').style.opacity = '0.75';
   document.getElementById('grade-desc').textContent = (isFarOut || day.isEnsemble)
     ? `Extended outlook for ${dateStr}. Less reliable — check back closer to the date.`
     : gradeDesc(day.grade, day.wind, day.rain, day.temp);
@@ -911,10 +929,10 @@ function renderApp(name, days, query) {
       ${name} &nbsp;·&nbsp; <span id="selected-date">${dateStr}</span>
     </div>
 
-    <div class="grade-card">
-      <div class="grade-circle" id="grade-circle" style="background:${col.bg};color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
-      <div class="grade-title" id="grade-title">${gradeTitle(today.grade)}</div>
-      <div class="grade-desc" id="grade-desc">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
+    <div class="grade-card" id="grade-card" style="background:${col.bg};border-color:${col.border}">
+      <div class="grade-circle" id="grade-circle" style="background:white;color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
+      <div class="grade-title" id="grade-title" style="color:${col.text}">${gradeTitle(today.grade)}</div>
+      <div class="grade-desc" id="grade-desc" style="color:${col.text};opacity:0.75">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
       <div class="action-row">
         <button id="heart-btn" class="action-btn" onclick="toggleFavorite(this.dataset.query, this.dataset.label)" data-query="${query||name}" data-label="${name}">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save
@@ -1015,7 +1033,11 @@ function renderFavorites() {
   }).join('');
   const sidebar = document.getElementById('fav-sidebar');
   const mobile = document.getElementById('fav-mobile');
-  if (sidebar) sidebar.querySelector('.fav-list').innerHTML = itemsHtml;
+  if (sidebar) {
+    sidebar.querySelector('.fav-list').innerHTML = itemsHtml;
+    const pop = document.getElementById('sidebar-popular');
+    if (pop) pop.style.display = favs.length === 0 ? 'block' : 'none';
+  }
   if (mobile) {
     mobile.querySelector('.fav-list').innerHTML = itemsHtml;
     mobile.style.display = favs.length > 0 ? 'block' : 'none';
