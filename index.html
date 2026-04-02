@@ -458,15 +458,26 @@ async function geocode(raw) {
 
 // ── Fetch ─────────────────────────────────────────────────
 async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+  const mainUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
     + `&hourly=temperature_2m,precipitation_probability,precipitation,windspeed_10m,relativehumidity_2m`
     + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum`
     + `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
-  const r = await fetch(url);
-  const data = await r.json();
-  if (data.error) throw new Error("Weather data unavailable: " + (data.reason || "unknown error"));
-  if (!data.daily) throw new Error("No weather data returned for this location.");
-  return data;
+
+  // Ensemble API for days 17-21 (free, less precise but good enough for extended outlook)
+  const ensembleUrl = `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${lat}&longitude=${lon}`
+    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum`
+    + `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=21&timezone=auto&models=gfs_seamless`;
+
+  const [mainRes, ensRes] = await Promise.all([fetch(mainUrl), fetch(ensembleUrl)]);
+  const main = await mainRes.json();
+  const ens = await ensRes.json();
+
+  if (main.error) throw new Error("Weather data unavailable: " + (main.reason || "unknown error"));
+  if (!main.daily) throw new Error("No weather data returned for this location.");
+
+  // Attach ensemble extended days (17-21) to main data
+  main._ensemble = ens.error ? null : ens;
+  return main;
 }
 
 // ── Process ───────────────────────────────────────────────
@@ -516,6 +527,32 @@ function processWeather(data) {
       bestWindow: window,
     };
   });
+  // Append ensemble extended forecast days 17-21
+  if (data._ensemble && data._ensemble.daily) {
+    const ed = data._ensemble.daily;
+    // Find dates not already in main forecast
+    const existingDates = new Set(days.map(d => d.date));
+    const extDays = ed.time
+      .map((date, i) => {
+        if (existingDates.has(date)) return null;
+        const tMax = Array.isArray(ed.temperature_2m_max) ? ed.temperature_2m_max[i] : (ed.temperature_2m_max?.mean?.[i] || 70);
+        const tMin = Array.isArray(ed.temperature_2m_min) ? ed.temperature_2m_min[i] : (ed.temperature_2m_min?.mean?.[i] || 55);
+        const wind = Array.isArray(ed.windspeed_10m_max) ? ed.windspeed_10m_max[i] : (ed.windspeed_10m_max?.mean?.[i] || 10);
+        const rain = Array.isArray(ed.precipitation_probability_max) ? ed.precipitation_probability_max[i] : (ed.precipitation_probability_max?.mean?.[i] || 20);
+        const rainVol = Array.isArray(ed.precipitation_sum) ? ed.precipitation_sum[i] : (ed.precipitation_sum?.mean?.[i] || 0);
+        const temp = (tMax + tMin) / 2;
+        const score = Math.round(windScore(wind) + rainScore(rain) + rainVolScore(rainVol) + tempScore(temp) + humidScore(55));
+        return {
+          date, temp, wind, rain, rainVol, totalRainMm: rainVol,
+          humid: 55, score, grade: gradeFromScore(score),
+          hours: [], bestWindow: null, isEnsemble: true
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 5); // max 5 extra days (days 17-21)
+    days.push(...extDays);
+  }
+
   return days;
 }
 
@@ -531,6 +568,13 @@ function fmtHour(h) { return h === 0 ? '12am' : h === 12 ? '12pm' : h > 12 ? `${
 function renderHourlyStrip(dayIdx) {
   const day = _days[dayIdx];
   if (!day) return;
+  if (day.isEnsemble || !day.hours || day.hours.length === 0) {
+    document.getElementById('hourly-section').innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:13px;color:var(--text-secondary);margin-bottom:1rem;">
+        Hourly breakdown not available for extended forecasts beyond 16 days. Grade is based on daily model data.
+      </div>`;
+    return;
+  }
   const hours = day.hours.filter(h => h.hour >= 6 && h.hour <= 20);
   const now = new Date();
   const isToday = dayIdx === 0;
@@ -659,11 +703,12 @@ function renderDayStrip() {
       html += `<div class="wk-divider"><div class="wk-line"></div><span class="wk-text">Wk ${weekNum+1}</span><div class="wk-line"></div></div>`;
       lastWeek = weekNum;
     }
+    const isEnsemble = day.isEnsemble || false;
     html += `<div class="day-card ${i===0?'today':''} ${isSelected?'selected':''}" style="opacity:${opacity}" onclick="selectDay(${i})">
       <div class="day-name">${DAYS[d.getDay()]}</div>
       <div class="day-date">${MONTHS[d.getMonth()]} ${d.getDate()}</div>
       <div class="day-grade" style="color:${gc.text}">${day.grade}</div>
-      ${isFarOut ? '<div class="day-est">est.</div>' : ''}
+      ${isFarOut || isEnsemble ? '<div class="day-est">' + (isEnsemble ? 'low conf.' : 'est.') + '</div>' : ''}
     </div>`;
   }
   document.getElementById('day-strip').innerHTML = html;
@@ -686,8 +731,8 @@ function selectDay(idx) {
   document.getElementById('grade-circle').style.border = `2px solid ${col.border}`;
   document.getElementById('grade-circle').textContent = day.grade;
   document.getElementById('grade-title').textContent = gradeTitle(day.grade);
-  document.getElementById('grade-desc').textContent = isFarOut
-    ? `Estimated forecast for ${dateStr}. Check back closer to the date.`
+  document.getElementById('grade-desc').textContent = (isFarOut || day.isEnsemble)
+    ? `Extended outlook for ${dateStr}. Less reliable — check back closer to the date.`
     : gradeDesc(day.grade, day.wind, day.rain, day.temp);
   document.getElementById('selected-date').textContent = dateStr;
 
@@ -782,7 +827,7 @@ function renderApp(name, days, query) {
     </div>
     </div>
 
-    <div class="section-label">16-day outlook <span style="font-size:10px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0">— tap any day</span></div>
+    <div class="section-label">21-day outlook <span style="font-size:10px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0">— tap any day</span></div>
     <div class="banner" id="banner">
       <p>Forecasts beyond 7 days are estimates and will update as the date gets closer.</p>
       <button onclick="document.getElementById('banner').style.display='none'">Got it</button>
