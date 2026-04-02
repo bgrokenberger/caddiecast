@@ -554,7 +554,10 @@ function bestWindow(hours) {
 // ── Overpass API course lookup ───────────────────────────
 async function searchCourseOverpass(query) {
   const escaped = query.replace(/["'\\]/g, '').trim();
-  const overpassQuery = `[out:json][timeout:10];(node["leisure"="golf_course"]["name"~"${escaped}",i];way["leisure"="golf_course"]["name"~"${escaped}",i];relation["leisure"="golf_course"]["name"~"${escaped}",i];);out center 8;`;
+  // Also try key words from the query for broader matching
+  const words = escaped.split(/\s+/).filter(w => w.length > 3 && !['golf','club','course','links','country','national'].includes(w.toLowerCase()));
+  const nameFilter = words.length > 0 ? words[0] : escaped;
+  const overpassQuery = `[out:json][timeout:12];(node["leisure"="golf_course"]["name"~"${nameFilter}",i];way["leisure"="golf_course"]["name"~"${nameFilter}",i];relation["leisure"="golf_course"]["name"~"${nameFilter}",i];);out center 10;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -582,7 +585,7 @@ function looksLikeCourse(q) {
 
 const COURSE_DB = {
   "pebble beach":{ name:"Pebble Beach Golf Links", city:"Monterey", state:"CA" },
-  "augusta national":{ name:"Augusta National Golf Club", city:"Augusta", state:"GA" },
+  "augusta national":{ name:"Augusta National Golf Club", city:"Augusta", state:"GA", lat:33.5021, lon:-82.0232 },
   "st andrews":{ name:"The Old Course at St Andrews", city:"St Andrews", state:"Scotland" },
   "pinehurst":{ name:"Pinehurst Resort", city:"Pinehurst", state:"NC" },
   "torrey pines":{ name:"Torrey Pines Golf Course", city:"San Diego", state:"CA" },
@@ -614,11 +617,13 @@ const COURSE_DB = {
   "baltusrol":{ name:"Baltusrol Golf Club", city:"Springfield", state:"NJ" },
   "olympic club":{ name:"The Olympic Club", city:"San Francisco", state:"CA" },
   "waialae":{ name:"Waialae Country Club", city:"Honolulu", state:"HI" },
-  "seminole":{ name:"Seminole Golf Club", city:"Juno Beach", state:"FL" },
-  "cypress point":{ name:"Cypress Point Club", city:"Pebble Beach", state:"CA" },
+  "seminole":{ name:"Seminole Golf Club", city:"Juno Beach", state:"FL", lat:26.8868, lon:-80.0553 },
+  "cypress point":{ name:"Cypress Point Club", city:"Pebble Beach", state:"CA", lat:36.5804, lon:-121.9652 },
   "spyglass hill":{ name:"Spyglass Hill Golf Course", city:"Pebble Beach", state:"CA" },
   "pasatiempo":{ name:"Pasatiempo Golf Club", city:"Santa Cruz", state:"CA" },
-  "valley club of montecito":{ name:"The Valley Club of Montecito", city:"Montecito", state:"CA" },
+  "valley club of montecito":{ name:"The Valley Club of Montecito", city:"Montecito", state:"CA", lat:34.4349, lon:-119.6407 },
+  "birnam wood":{ name:"Birnam Wood Golf Club", city:"Montecito", state:"CA", lat:34.4328, lon:-119.6107 },
+  "birnam wood golf":{ name:"Birnam Wood Golf Club", city:"Montecito", state:"CA", lat:34.4328, lon:-119.6107 },
   "valley club":{ name:"The Valley Club of Montecito", city:"Montecito", state:"CA" },
   "riviera":{ name:"Riviera Country Club", city:"Pacific Palisades", state:"CA" },
   "los angeles country club":{ name:"Los Angeles Country Club", city:"Los Angeles", state:"CA" },
@@ -626,7 +631,7 @@ const COURSE_DB = {
   "sherwood country club":{ name:"Sherwood Country Club", city:"Thousand Oaks", state:"CA" },
   "pelican hill":{ name:"Pelican Hill Golf Club", city:"Newport Coast", state:"CA" },
   "liberty national":{ name:"Liberty National Golf Club", city:"Jersey City", state:"NJ" },
-  "pine valley":{ name:"Pine Valley Golf Club", city:"Pine Valley", state:"NJ" },
+  "pine valley":{ name:"Pine Valley Golf Club", city:"Pine Valley", state:"NJ", lat:39.7868, lon:-74.9654 },
   "sand hills":{ name:"Sand Hills Golf Club", city:"Mullen", state:"NE" },
   "prairie dunes":{ name:"Prairie Dunes Country Club", city:"Hutchinson", state:"KS" },
   "crystal downs":{ name:"Crystal Downs Country Club", city:"Frankfort", state:"MI" },
@@ -1384,6 +1389,16 @@ async function run(query, displayName, cityOverride) {
       const course = matches[0];
       const label = course.name + ' — ' + course.city + ', ' + course.state;
       mc.innerHTML = '';
+      // If we have exact coords, use them directly — no geocoding needed
+      if (course.lat && course.lon) {
+        window._lastResolvedLat = course.lat;
+        window._lastResolvedLon = course.lon;
+        window._lastResolvedCity = label;
+        const weather = await fetchWeather(course.lat, course.lon);
+        const days = processWeather(weather);
+        renderApp(label, days, query);
+        return;
+      }
       return run(course.city, label, true);
     } else if (matches.length > 1) {
       mc.innerHTML = '';
