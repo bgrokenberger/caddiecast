@@ -173,6 +173,30 @@
       color: var(--red-dark);
       line-height: 1.6;
     }
+    .inline-error {
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--amber-dark);
+      line-height: 1.5;
+    }
+    .inline-error p { margin-bottom: 8px; font-weight: 500; }
+    .suggestion-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip {
+      background: white;
+      border: 1px solid var(--amber-border);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--amber-dark);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s;
+    }
+    .chip:hover { background: var(--green-light); border-color: var(--green-border); color: var(--green-mid); }
 
     /* Location line */
     .location-line {
@@ -369,18 +393,19 @@
     <input id="city-input" type="text" placeholder="City or location..." autocomplete="off" />
     <button onclick="searchCity()">Check it</button>
   </div>
-  <div class="search-hint">Try "Scottsdale AZ", "Monterey CA", "Chicago", "St Andrews Scotland"</div>
+  <div class="search-hint">Try a city name, or a course like "Pebble Beach" or "Torrey Pines"</div>
+  <div id="inline-error" style="display:none;margin-top:10px;"></div>
 </div>
 
 <div class="quick-picks" id="quick-picks">
   <div class="quick-label">Popular courses</div>
   <div class="quick-grid">
-    <button class="quick-btn" onclick="loadQuick('Scottsdale, Arizona')"><span class="flag">🌵</span>Scottsdale, AZ</button>
-    <button class="quick-btn" onclick="loadQuick('Monterey, California')"><span class="flag">🌊</span>Monterey, CA</button>
-    <button class="quick-btn" onclick="loadQuick('St Andrews, Scotland')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
-    <button class="quick-btn" onclick="loadQuick('Augusta, Georgia')"><span class="flag">🍑</span>Augusta, GA</button>
-    <button class="quick-btn" onclick="loadQuick('Pinehurst, North Carolina')"><span class="flag">⛳</span>Pinehurst, NC</button>
-    <button class="quick-btn" onclick="loadQuick('Maui, Hawaii')"><span class="flag">🌺</span>Maui, HI</button>
+    <button class="quick-btn" onclick="loadQuick('Scottsdale')"><span class="flag">🌵</span>Scottsdale, AZ</button>
+    <button class="quick-btn" onclick="loadQuick('Monterey')"><span class="flag">🌊</span>Monterey, CA</button>
+    <button class="quick-btn" onclick="loadQuick('St Andrews')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
+    <button class="quick-btn" onclick="loadQuick('Augusta')"><span class="flag">🍑</span>Augusta, GA</button>
+    <button class="quick-btn" onclick="loadQuick('Pinehurst')"><span class="flag">⛳</span>Pinehurst, NC</button>
+    <button class="quick-btn" onclick="loadQuick('Maui')"><span class="flag">🌺</span>Maui, HI</button>
   </div>
 </div>
 
@@ -593,6 +618,9 @@ function renderApp(name, days) {
 
 async function run(query, displayName) {
   const mc = document.getElementById("main-content");
+  const inlineErr = document.getElementById("inline-error");
+  inlineErr.style.display = "none";
+  inlineErr.innerHTML = "";
   mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
   document.getElementById("quick-picks").style.display = "none";
   try {
@@ -600,10 +628,18 @@ async function run(query, displayName) {
     const weather = await fetchWeather(loc.latitude, loc.longitude);
     const days = processWeather(weather);
     const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
+    mc.innerHTML = "";
     renderApp(name, days);
   } catch(e) {
+    mc.innerHTML = "";
     document.getElementById("quick-picks").style.display = "block";
-    mc.innerHTML = `<div class="error-box">${e.message}</div>`;
+    const suggestions = ["Scottsdale", "Chicago", "Monterey", "St Andrews", "Augusta", "Pinehurst"];
+    const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join("");
+    inlineErr.style.display = "block";
+    inlineErr.innerHTML = `<div class="inline-error">
+      <p>Couldn't find that location. Try one of these or use just the city name:</p>
+      <div class="suggestion-chips">${chips}</div>
+    </div>`;
   }
 }
 
