@@ -757,9 +757,9 @@ function fmtHour(h) { return h === 0 ? '12am' : h === 12 ? '12pm' : h > 12 ? `${
 // ── Tee Time Optimizer ───────────────────────────────────
 let _teeLength = 4; // default 18 holes = 4hrs
 const TEE_OPTIONS = [
-  { label: '9h', hours: 2.5, name: '9 holes' },
-  { label: '18h', hours: 4, name: '18 holes' },
-  { label: 'TW', hours: 2, name: 'Twilight' },
+  { label: '9 holes', hours: 2.5, name: '9 holes' },
+  { label: '18 holes', hours: 4, name: '18 holes' },
+  { label: 'Twilight', hours: 2, name: 'Twilight' },
 ];
 
 function calcTeeWindows(dayIdx, roundHours) {
