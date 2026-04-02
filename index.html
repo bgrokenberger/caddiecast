@@ -451,7 +451,7 @@ async function geocode(q) {
 }
 
 async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,relativehumidity_2m_max&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max&hourly=relative_humidity_2m&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
   const r = await fetch(url);
   const data = await r.json();
   if (data.error) throw new Error("Weather data unavailable: " + (data.reason || "unknown error"));
@@ -461,11 +461,14 @@ async function fetchWeather(lat, lon) {
 
 function processWeather(data) {
   const d = data.daily;
+  const hourly = data.hourly;
   return d.time.map((date, i) => {
     const temp  = (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2;
     const wind  = d.windspeed_10m_max[i] || 0;
     const rain  = d.precipitation_probability_max[i] || 0;
-    const humid = d.relativehumidity_2m_max[i] || 50;
+    // Average the 24 hourly humidity readings for this day
+    const hourlySlice = hourly.relative_humidity_2m.slice(i * 24, i * 24 + 24);
+    const humid = hourlySlice.length ? Math.round(hourlySlice.reduce((a,b) => a+b, 0) / hourlySlice.length) : 50;
     const score = windScore(wind) + rainScore(rain) + tempScore(temp) + humidScore(humid);
     return { date, temp, wind, rain, humid, score, grade: gradeFromScore(score) };
   });
