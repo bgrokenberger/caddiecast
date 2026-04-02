@@ -151,9 +151,8 @@
     .banner button { background: none; border: none; font-size: 12px; font-weight: 600; color: var(--amber-dark); cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; padding: 0; }
 
     /* ── Strip ── */
-    .scroll-outer { overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 4px; }
     /* Minimal scrollbar on both strips */
-    .scroll-outer { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.12) transparent; padding-bottom: 8px; }
+    .scroll-outer { overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 8px; scroll-behavior: auto; scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.12) transparent; }
     .scroll-outer::-webkit-scrollbar { height: 3px; }
     .scroll-outer::-webkit-scrollbar-track { background: transparent; }
     .scroll-outer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
@@ -561,18 +560,21 @@ function renderHourlyStrip(dayIdx) {
     <div class="scroll-outer" id="hourly-scroll"><div class="hr-strip">${stripHTML}</div></div>
   `;
 
+  // Use two nested timeouts: first to ensure render, second to ensure scroll sticks
   setTimeout(() => {
     const scroller = document.getElementById('hourly-scroll');
     if (!scroller) return;
     const now = new Date();
     const currentHour = dayIdx === 0 ? now.getHours() : 8;
-    // Count how many cards come before current hour in the strip (hours 6 to current-1)
-    // Each card is 66px wide + 8px gap = 74px per slot
-    const CARD_STEP = 74;
+    const CARD_STEP = 74; // 66px card + 8px gap
     const firstHour = 6;
-    const cardsBefore = Math.max(0, currentHour - firstHour - 1); // prev hour = 1st card, current = 2nd
-    scroller.scrollLeft = cardsBefore * CARD_STEP;
-  }, 80);
+    const prevHourIndex = Math.max(0, (currentHour - 1) - firstHour);
+    const target = prevHourIndex * CARD_STEP;
+    scroller.style.scrollBehavior = 'auto';
+    scroller.scrollLeft = target;
+    // Second timeout to ensure it sticks after any browser reflow
+    setTimeout(() => { scroller.scrollLeft = target; }, 50);
+  }, 150);
 }
 
 function selectHour(dayIdx, hour) {
