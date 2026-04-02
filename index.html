@@ -300,6 +300,55 @@
     .bw-time { font-size: 15px; font-weight: 600; color: var(--green-mid); flex: 1; }
     .bw-grade { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
 
+    /* ── Tee time optimizer ── */
+    .tee-optimizer {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px;
+    }
+    .tee-optimizer-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+    }
+    .tee-optimizer-title {
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .tee-length-pills { display: flex; gap: 5px; }
+    .tee-pill {
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+      background: var(--card); color: var(--text-secondary); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tee-pill.active { background: var(--green-mid); color: white; border-color: var(--green-mid); }
+    .tee-results { display: flex; flex-direction: column; gap: 7px; }
+    .tee-result {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--bg); transition: border-color 0.15s;
+    }
+    .tee-result.tee-best {
+      background: var(--green-light); border-color: var(--green-border);
+    }
+    .tee-result-rank {
+      font-size: 10px; font-weight: 600; color: var(--text-tertiary);
+      width: 14px; flex-shrink: 0; text-align: center;
+    }
+    .tee-result.tee-best .tee-result-rank { color: var(--green-mid); }
+    .tee-result-time {
+      font-size: 15px; font-weight: 600; color: var(--text); flex-shrink: 0; min-width: 56px;
+    }
+    .tee-result.tee-best .tee-result-time { color: var(--green-mid); }
+    .tee-result-window {
+      font-size: 12px; color: var(--text-secondary); flex: 1;
+    }
+    .tee-result-grade {
+      font-size: 13px; font-weight: 600; padding: 3px 10px;
+      border-radius: 999px; flex-shrink: 0;
+    }
+    .tee-no-results {
+      font-size: 13px; color: var(--text-secondary); text-align: center; padding: 8px 0;
+    }
+
     /* ── Day strip selected state ── */
     .day-card { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
     .day-card:hover { border-color: var(--green-border); transform: translateY(-1px); }
@@ -705,6 +754,100 @@ let _selectedDay = 0;
 // ── Render helpers ────────────────────────────────────────
 function fmtHour(h) { return h === 0 ? '12am' : h === 12 ? '12pm' : h > 12 ? `${h-12}pm` : `${h}am`; }
 
+// ── Tee Time Optimizer ───────────────────────────────────
+let _teeLength = 4; // default 18 holes = 4hrs
+const TEE_OPTIONS = [
+  { label: '9h', hours: 2.5, name: '9 holes' },
+  { label: '18h', hours: 4, name: '18 holes' },
+  { label: 'TW', hours: 2, name: 'Twilight' },
+];
+
+function calcTeeWindows(dayIdx, roundHours) {
+  const day = _days[dayIdx];
+  if (!day || !day.hours) return [];
+  const playable = day.hours.filter(h => h.hour >= 6 && h.hour <= 19);
+  const slots = Math.ceil(roundHours);
+  const results = [];
+  const now = new Date();
+  const isToday = dayIdx === 0;
+
+  for (let i = 0; i <= playable.length - slots; i++) {
+    const window = playable.slice(i, i + slots);
+    // Skip windows that are entirely in the past
+    if (isToday && window[window.length-1].hour < now.getHours()) continue;
+    // Skip windows that end after 7pm
+    if (window[window.length-1].hour > 19) continue;
+    const avgScore = Math.round(window.reduce((s, h) => s + h.score, 0) / window.length);
+    const startHour = window[0].hour;
+    const endHour = window[window.length-1].hour + 1;
+    const fmt = h => h === 12 ? '12pm' : h > 12 ? `${h-12}pm` : h === 0 ? '12am' : `${h}am`;
+    results.push({
+      startHour,
+      endHour,
+      label: `${fmt(startHour)}–${fmt(endHour)}`,
+      score: avgScore,
+      grade: gradeFromScore(avgScore),
+      window,
+    });
+  }
+  // Sort by score descending, dedupe by start hour
+  results.sort((a, b) => b.score - a.score);
+  const seen = new Set();
+  return results.filter(r => {
+    if (seen.has(r.startHour)) return false;
+    seen.add(r.startHour);
+    return true;
+  }).slice(0, 3);
+}
+
+function renderTeeOptimizer(dayIdx) {
+  const container = document.getElementById('tee-optimizer');
+  if (!container) return;
+  const day = _days[dayIdx];
+  if (!day || day.isEnsemble || !day.hours || day.hours.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'block';
+
+  const results = calcTeeWindows(dayIdx, _teeLength);
+  const pillsHtml = TEE_OPTIONS.map(opt =>
+    `<button class="tee-pill ${opt.hours === _teeLength ? 'active' : ''}"
+      onclick="setTeeLength(${opt.hours}, ${dayIdx})">${opt.label}</button>`
+  ).join('');
+
+  let resultsHtml = '';
+  if (results.length === 0) {
+    resultsHtml = '<div class="tee-no-results">No good windows found for this day.</div>';
+  } else {
+    resultsHtml = results.map((r, i) => {
+      const gc = gradeColor(r.grade);
+      const isBest = i === 0;
+      const rank = i === 0 ? '★' : i === 1 ? '2' : '3';
+      return `<div class="tee-result ${isBest ? 'tee-best' : ''}">
+        <span class="tee-result-rank">${rank}</span>
+        <span class="tee-result-time">${fmtHour(r.startHour)}</span>
+        <span class="tee-result-window">${r.label}</span>
+        <span class="tee-result-grade" style="color:${gc.text};background:${gc.bg}">${r.grade}</span>
+      </div>`;
+    }).join('');
+  }
+
+  container.innerHTML = `
+    <div class="tee-optimizer-header">
+      <span class="tee-optimizer-title">Tee time optimizer</span>
+      <div class="tee-length-pills">${pillsHtml}</div>
+    </div>
+    <div class="tee-results">${resultsHtml}</div>
+  `;
+}
+
+function setTeeLength(hours, dayIdx) {
+  _teeLength = hours;
+  localStorage.setItem('cc_tee_length', hours);
+  renderTeeOptimizer(dayIdx);
+}
+
 function renderHourlyStrip(dayIdx) {
   const day = _days[dayIdx];
   if (!day) return;
@@ -891,8 +1034,9 @@ function selectDay(idx) {
     el.classList.toggle('selected', i === idx);
   });
 
-  // Update hourly
+  // Update hourly + tee optimizer
   renderHourlyStrip(idx);
+  renderTeeOptimizer(idx);
 }
 
 function gradeDesc(g, wind, rain, temp) {
@@ -944,6 +1088,7 @@ function renderApp(name, days, query) {
     </div>
 
     <div class="section-label">Hourly forecast</div>
+    <div id="tee-optimizer" class="tee-optimizer" style="display:none"></div>
     <div id="hourly-section"></div>
 
     <div class="section-label">Conditions breakdown <span id="conditions-label" style="font-size:10px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0">— daily avg</span></div>
@@ -985,8 +1130,13 @@ function renderApp(name, days, query) {
     <div class="scroll-outer"><div class="strip" id="day-strip"></div></div>
   `;
 
+  // Load saved tee length preference
+  const savedTee = localStorage.getItem('cc_tee_length');
+  if (savedTee) _teeLength = parseFloat(savedTee);
+
   renderDayStrip();
   renderHourlyStrip(0);
+  renderTeeOptimizer(0);
   setTimeout(() => updateHeartBtn(query || name), 50);
 }
 
