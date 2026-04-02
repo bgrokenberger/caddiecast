@@ -560,7 +560,6 @@ function renderHourlyStrip(dayIdx) {
     <div class="scroll-outer" id="hourly-scroll"><div class="hr-strip">${stripHTML}</div></div>
   `;
 
-  // Poll until scrollLeft actually sticks (browser sometimes ignores early sets)
   setTimeout(() => {
     const scroller = document.getElementById('hourly-scroll');
     if (!scroller) return;
@@ -570,16 +569,20 @@ function renderHourlyStrip(dayIdx) {
     const firstHour = 6;
     const prevHourIndex = Math.max(0, (currentHour - 1) - firstHour);
     const target = prevHourIndex * CARD_STEP;
-    let attempts = 0;
-    function tryScroll() {
-      scroller.scrollTo({ left: target, behavior: 'instant' });
-      attempts++;
-      if (scroller.scrollLeft !== target && attempts < 10) {
-        setTimeout(tryScroll, 50);
-      }
-    }
-    tryScroll();
-  }, 100);
+    
+    // Debug: show what we're trying to do
+    const dbg = document.createElement('div');
+    dbg.style = 'font-size:10px;color:red;padding:2px 4px;';
+    dbg.id = 'scroll-debug';
+    dbg.textContent = 'hour=' + currentHour + ' target=' + target + 'px scrollW=' + scroller.scrollWidth + ' clientW=' + scroller.clientWidth;
+    scroller.parentNode.insertBefore(dbg, scroller);
+    
+    scroller.scrollTo({ left: target, behavior: 'instant' });
+    setTimeout(() => {
+      const dbg2 = document.getElementById('scroll-debug');
+      if (dbg2) dbg2.textContent += ' | actual=' + scroller.scrollLeft + 'px';
+    }, 200);
+  }, 150);
 }
 
 function selectHour(dayIdx, hour) {
