@@ -560,21 +560,26 @@ function renderHourlyStrip(dayIdx) {
     <div class="scroll-outer" id="hourly-scroll"><div class="hr-strip">${stripHTML}</div></div>
   `;
 
-  // Use two nested timeouts: first to ensure render, second to ensure scroll sticks
+  // Poll until scrollLeft actually sticks (browser sometimes ignores early sets)
   setTimeout(() => {
     const scroller = document.getElementById('hourly-scroll');
     if (!scroller) return;
     const now = new Date();
     const currentHour = dayIdx === 0 ? now.getHours() : 8;
-    const CARD_STEP = 74; // 66px card + 8px gap
+    const CARD_STEP = 74;
     const firstHour = 6;
     const prevHourIndex = Math.max(0, (currentHour - 1) - firstHour);
     const target = prevHourIndex * CARD_STEP;
-    scroller.style.scrollBehavior = 'auto';
-    scroller.scrollLeft = target;
-    // Second timeout to ensure it sticks after any browser reflow
-    setTimeout(() => { scroller.scrollLeft = target; }, 50);
-  }, 150);
+    let attempts = 0;
+    function tryScroll() {
+      scroller.scrollTo({ left: target, behavior: 'instant' });
+      attempts++;
+      if (scroller.scrollLeft !== target && attempts < 10) {
+        setTimeout(tryScroll, 50);
+      }
+    }
+    tryScroll();
+  }, 100);
 }
 
 function selectHour(dayIdx, hour) {
