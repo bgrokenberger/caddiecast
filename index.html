@@ -8,414 +8,228 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --green-dark: #1a3d0a;
-      --green-mid: #27500A;
-      --green-light: #EAF3DE;
-      --green-border: #C0DD97;
-      --blue-dark: #0C447C;
-      --blue-light: #E6F1FB;
-      --blue-border: #B5D4F4;
-      --amber-dark: #633806;
-      --amber-light: #FAEEDA;
-      --amber-border: #FAC775;
-      --red-dark: #791F1F;
-      --red-light: #FCEBEB;
-      --red-border: #F7C1C1;
-      --bg: #f5f4f0;
-      --card: #ffffff;
-      --text: #1a1a1a;
-      --text-secondary: #666;
-      --text-tertiary: #999;
-      --border: rgba(0,0,0,0.1);
-      --radius: 16px;
-      --radius-sm: 10px;
+      --green-dark: #1a3d0a; --green-mid: #27500A; --green-light: #EAF3DE; --green-border: #C0DD97;
+      --blue-dark: #0C447C; --blue-light: #E6F1FB; --blue-border: #B5D4F4;
+      --amber-dark: #633806; --amber-light: #FAEEDA; --amber-border: #FAC775;
+      --red-dark: #791F1F; --red-light: #FCEBEB; --red-border: #F7C1C1;
+      --bg: #f5f4f0; --card: #ffffff; --text: #1a1a1a;
+      --text-secondary: #666; --text-tertiary: #999; --border: rgba(0,0,0,0.1);
+      --radius: 16px; --radius-sm: 10px; --sidebar: 240px;
     }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 0 0 3rem;
+    /* ── Layout ── */
+    .page { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--sidebar); flex-shrink: 0; background: var(--card);
+      border-right: 1px solid var(--border); padding: 1.5rem 1rem;
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0;
     }
+    .sidebar-logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); margin-bottom: 1.5rem; }
+    .sidebar-logo span { color: var(--green-mid); }
+    .sidebar-section-label {
+      font-size: 10px; font-weight: 600; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;
+    }
+    .fav-list { display: flex; flex-direction: column; gap: 4px; }
+    .fav-item { display: flex; align-items: center; gap: 4px; }
+    .fav-name {
+      flex: 1; background: none; border: none; text-align: left; padding: 7px 8px;
+      border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif;
+      color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .fav-name:hover { background: var(--green-light); color: var(--green-mid); }
+    .fav-remove {
+      background: none; border: none; color: var(--text-tertiary); cursor: pointer;
+      font-size: 16px; padding: 4px 6px; border-radius: 6px; line-height: 1;
+      font-family: 'DM Sans', sans-serif; flex-shrink: 0;
+    }
+    .fav-remove:hover { background: var(--red-light); color: var(--red-dark); }
+    .fav-empty { font-size: 12px; color: var(--text-tertiary); line-height: 1.6; padding: 4px 0; }
 
-    /* Header */
-    .header {
-      text-align: center;
-      padding: 2.5rem 1rem 1.5rem;
-    }
-    .logo {
-      font-family: 'DM Serif Display', serif;
-      font-size: 32px;
-      color: var(--text);
-      letter-spacing: -0.5px;
-    }
-    .logo span { color: var(--green-mid); }
-    .tagline {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-      letter-spacing: 0.3px;
-    }
+    /* ── Main column ── */
+    .main-col { flex: 1; min-width: 0; padding: 0 0 3rem; }
+    .header { text-align: center; padding: 2rem 1rem 1.25rem; }
+    .header-logo { font-family: 'DM Serif Display', serif; font-size: 30px; color: var(--text); letter-spacing: -0.5px; }
+    .header-logo span { color: var(--green-mid); }
+    .tagline { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
 
-    /* Search */
-    .search-wrap {
-      max-width: 480px;
-      margin: 0 auto 0.5rem;
-      padding: 0 1rem;
-    }
-    .search-row {
-      display: flex;
-      gap: 8px;
-    }
+    /* ── Search ── */
+    .search-wrap { max-width: 480px; margin: 0 auto 0.5rem; padding: 0 1rem; }
+    .search-row { display: flex; gap: 8px; }
     .search-row input {
-      flex: 1;
-      padding: 13px 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      font-size: 15px;
-      font-family: 'DM Sans', sans-serif;
-      background: var(--card);
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s;
+      flex: 1; padding: 13px 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); font-size: 15px; font-family: 'DM Sans', sans-serif;
+      background: var(--card); color: var(--text); outline: none; transition: border-color 0.2s;
     }
     .search-row input:focus { border-color: var(--green-mid); }
     .search-row button {
-      padding: 13px 20px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: var(--green-mid);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.2s;
+      padding: 13px 20px; border-radius: var(--radius-sm); border: none;
+      background: var(--green-mid); color: #fff; font-size: 15px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s;
     }
     .search-row button:hover { background: var(--green-dark); }
-    .search-hint {
-      font-size: 12px;
-      color: var(--text-tertiary);
-      text-align: center;
-      margin-top: 6px;
-    }
+    .search-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; text-align: center; }
 
-    /* Quick picks */
-    .quick-picks {
-      max-width: 480px;
-      margin: 1.25rem auto 0;
-      padding: 0 1rem;
+    /* ── Mobile favorites ── */
+    .fav-mobile {
+      max-width: 480px; margin: 0.75rem auto 0; padding: 0 1rem;
+      display: none;
     }
-    .quick-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 8px;
-    }
-    .quick-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .fav-mobile .fav-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .fav-mobile .fav-item { background: var(--card); border: 1px solid var(--border); border-radius: 999px; display: flex; align-items: center; }
+    .fav-mobile .fav-name { padding: 5px 4px 5px 10px; font-size: 12px; white-space: nowrap; }
+    .fav-mobile .fav-remove { padding: 4px 8px 4px 2px; font-size: 14px; }
+    .fav-mobile-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+
+    /* ── Quick picks ── */
+    .quick-picks { max-width: 480px; margin: 1rem auto 0; padding: 0 1rem; }
+    .quick-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .quick-btn {
-      padding: 10px 14px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      color: var(--text);
-      cursor: pointer;
-      text-align: left;
-      transition: border-color 0.2s, background 0.2s;
+      padding: 10px 14px; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif;
+      color: var(--text); cursor: pointer; text-align: left; transition: border-color 0.2s, background 0.2s;
     }
     .quick-btn:hover { border-color: var(--green-mid); background: var(--green-light); }
     .quick-btn .flag { margin-right: 6px; }
 
-    /* Main content */
-    .main {
-      max-width: 480px;
-      margin: 1.5rem auto 0;
-      padding: 0 1rem;
-    }
+    /* ── Main content ── */
+    .main { max-width: 480px; margin: 1.25rem auto 0; padding: 0 1rem; }
 
-    /* Loading */
-    .loading {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--text-secondary);
-      font-size: 15px;
-    }
-    .loading-dots::after {
-      content: '';
-      animation: dots 1.2s steps(3, end) infinite;
-    }
-    @keyframes dots {
-      0%   { content: ''; }
-      33%  { content: '.'; }
-      66%  { content: '..'; }
-      100% { content: '...'; }
-    }
+    /* ── Loading ── */
+    .loading { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); font-size: 15px; }
+    .loading-dots::after { content: ''; animation: dots 1.2s steps(3, end) infinite; }
+    @keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
 
-    /* Error */
-    .error-box {
-      background: var(--red-light);
-      border: 1px solid var(--red-border);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
-      font-size: 14px;
-      color: var(--red-dark);
-      line-height: 1.6;
-    }
-    .inline-error {
-      background: var(--amber-light);
-      border: 1px solid var(--amber-border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      font-size: 13px;
-      color: var(--amber-dark);
-      line-height: 1.5;
-    }
+    /* ── Error ── */
+    .error-box { background: var(--red-light); border: 1px solid var(--red-border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14px; color: var(--red-dark); line-height: 1.6; }
+    .inline-error { background: var(--amber-light); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--amber-dark); line-height: 1.5; }
     .inline-error p { margin-bottom: 8px; font-weight: 500; }
     .suggestion-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .chip {
-      background: white;
-      border: 1px solid var(--amber-border);
-      border-radius: 999px;
-      padding: 5px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--amber-dark);
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      transition: background 0.15s;
-    }
+    .chip { background: white; border: 1px solid var(--amber-border); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--amber-dark); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
     .chip:hover { background: var(--green-light); border-color: var(--green-border); color: var(--green-mid); }
 
-    /* Location line */
-    .location-line {
-      font-size: 13px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-bottom: 1rem;
-    }
+    /* ── Location ── */
+    .location-line { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; margin-bottom: 1rem; }
 
-    /* Grade card */
-    .grade-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2rem 1.5rem;
-      text-align: center;
-      margin-bottom: 1rem;
+    /* ── Grade card ── */
+    .grade-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 1.5rem 1.5rem; text-align: center; margin-bottom: 1rem; }
+    .grade-circle { width: 108px; height: 108px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-family: 'DM Serif Display', serif; font-size: 44px; }
+    .grade-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .grade-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem; }
+    .heart-btn {
+      display: inline-flex; align-items: center; gap: 6px; background: none;
+      border: 1px solid var(--border); border-radius: 999px; padding: 7px 16px;
+      font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+      color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
     }
-    .grade-circle {
-      width: 108px;
-      height: 108px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.25rem;
-      font-family: 'DM Serif Display', serif;
-      font-size: 44px;
-    }
-    .grade-title {
-      font-size: 22px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .grade-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
+    .heart-btn:hover { border-color: #e24b4a; color: #e24b4a; background: var(--red-light); }
 
-    /* Section label */
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 10px;
-    }
+    /* ── Section label ── */
+    .section-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
 
-    /* Factors grid */
-    .factors {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 1.25rem;
-    }
-    .factor {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px;
-    }
-    .factor-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    .factor-name {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .pill {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 999px;
-    }
+    /* ── Factors ── */
+    .factors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+    .factor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+    .factor-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .factor-name { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
     .pill-g { background: var(--green-light); color: var(--green-mid); }
     .pill-w { background: var(--amber-light); color: var(--amber-dark); }
     .pill-b { background: var(--red-light); color: var(--red-dark); }
-    .factor-val {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-    .factor-bar {
-      height: 4px;
-      background: #e8e8e4;
-      border-radius: 2px;
-    }
+    .factor-val { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .factor-bar { height: 4px; background: #e8e8e4; border-radius: 2px; }
     .factor-fill { height: 4px; border-radius: 2px; }
 
-    /* Banner */
-    .banner {
-      background: var(--amber-light);
-      border: 1px solid var(--amber-border);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
+    /* ── Banner ── */
+    .banner { background: var(--amber-light); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
     .banner p { font-size: 12px; color: var(--amber-dark); line-height: 1.5; flex: 1; }
-    .banner button {
-      background: none;
-      border: none;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--amber-dark);
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      white-space: nowrap;
-      padding: 0;
-    }
+    .banner button { background: none; border: none; font-size: 12px; font-weight: 600; color: var(--amber-dark); cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; padding: 0; }
 
-    /* Scroll strip */
-    .scroll-outer {
-      overflow-x: auto;
-      scrollbar-width: none;
-      margin-bottom: 1.5rem;
-      padding-bottom: 4px;
-    }
+    /* ── Strip ── */
+    .scroll-outer { overflow-x: auto; scrollbar-width: none; margin-bottom: 1.5rem; padding-bottom: 4px; }
     .scroll-outer::-webkit-scrollbar { display: none; }
-    .strip {
-      display: flex;
-      gap: 8px;
-      width: max-content;
-    }
-    .day-card {
-      width: 66px;
-      flex-shrink: 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 10px 6px;
-      text-align: center;
-      transition: border-color 0.2s;
-    }
-    .day-card.today {
-      background: var(--green-light);
-      border-color: var(--green-border);
-    }
+    .strip { display: flex; gap: 8px; width: max-content; }
+    .day-card { width: 66px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; }
+    .day-card.today { background: var(--green-light); border-color: var(--green-border); }
     .day-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
     .day-date { font-size: 10px; color: var(--text-tertiary); margin-bottom: 6px; }
     .day-grade { font-size: 16px; font-weight: 600; }
     .day-est { font-size: 9px; color: var(--text-tertiary); margin-top: 3px; }
-    .wk-divider {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0 2px;
-      min-height: 95px;
-    }
+    .wk-divider { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 2px; min-height: 95px; }
     .wk-line { width: 1px; flex: 1; background: var(--border); }
-    .wk-text {
-      font-size: 9px;
-      color: var(--text-tertiary);
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      padding: 3px 0;
-      letter-spacing: 0.3px;
-    }
+    .wk-text { font-size: 9px; color: var(--text-tertiary); writing-mode: vertical-rl; transform: rotate(180deg); padding: 3px 0; letter-spacing: 0.3px; }
 
-    /* Footer */
-    .footer {
-      text-align: center;
-      margin-top: 2rem;
-      font-size: 12px;
-      color: var(--text-tertiary);
-    }
+    /* ── Footer ── */
+    .footer { text-align: center; margin-top: 2rem; font-size: 12px; color: var(--text-tertiary); }
     .footer a { color: var(--green-mid); text-decoration: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .fav-mobile { display: block; }
+      .header-logo { font-size: 26px; }
+    }
   </style>
 </head>
 <body>
+<div class="page">
 
-<div class="header">
-  <div class="logo">caddie<span>cast</span></div>
-  <div class="tagline">Is it a golf day? Let's find out.</div>
-</div>
+  <!-- Sidebar (desktop) -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">caddie<span>cast</span></div>
+    <div class="sidebar-section-label">My Favorites</div>
+    <div id="fav-sidebar"><div class="fav-list"></div></div>
+  </aside>
 
-<div class="search-wrap">
-  <div class="search-row">
-    <input id="city-input" type="text" placeholder="City or location..." autocomplete="off" />
-    <button onclick="searchCity()">Check it</button>
+  <!-- Main column -->
+  <div class="main-col">
+    <div class="header">
+      <div class="header-logo">caddie<span>cast</span></div>
+      <div class="tagline">Is it a golf day? Let's find out.</div>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-row">
+        <input id="city-input" type="text" placeholder="City, course, or zip..." autocomplete="off" />
+        <button onclick="searchCity()">Check it</button>
+      </div>
+      <div class="search-hint">Try "Scottsdale", "Pebble Beach", "Valley Club of Montecito"</div>
+      <div id="inline-error" style="display:none;margin-top:10px;"></div>
+    </div>
+
+    <!-- Mobile favorites -->
+    <div class="fav-mobile" id="fav-mobile">
+      <div class="fav-mobile-label">My Favorites</div>
+      <div class="fav-list"></div>
+    </div>
+
+    <div class="quick-picks" id="quick-picks">
+      <div class="quick-label">Popular courses</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="loadQuick('Scottsdale')"><span class="flag">🌵</span>Scottsdale, AZ</button>
+        <button class="quick-btn" onclick="loadQuick('Monterey')"><span class="flag">🌊</span>Monterey, CA</button>
+        <button class="quick-btn" onclick="loadQuick('St Andrews')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
+        <button class="quick-btn" onclick="loadQuick('Augusta')"><span class="flag">🍑</span>Augusta, GA</button>
+        <button class="quick-btn" onclick="loadQuick('Pinehurst')"><span class="flag">⛳</span>Pinehurst, NC</button>
+        <button class="quick-btn" onclick="loadQuick('Maui')"><span class="flag">🌺</span>Maui, HI</button>
+      </div>
+    </div>
+
+    <div class="main" id="main-content"></div>
+
+    <div class="footer">
+      Weather data from <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Free &amp; open source
+    </div>
   </div>
-  <div class="search-hint">Try a city name, or a course like "Pebble Beach" or "Torrey Pines"</div>
-  <div id="inline-error" style="display:none;margin-top:10px;"></div>
-</div>
-
-<div class="quick-picks" id="quick-picks">
-  <div class="quick-label">Popular courses</div>
-  <div class="quick-grid">
-    <button class="quick-btn" onclick="loadQuick('Scottsdale')"><span class="flag">🌵</span>Scottsdale, AZ</button>
-    <button class="quick-btn" onclick="loadQuick('Monterey')"><span class="flag">🌊</span>Monterey, CA</button>
-    <button class="quick-btn" onclick="loadQuick('St Andrews')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
-    <button class="quick-btn" onclick="loadQuick('Augusta')"><span class="flag">🍑</span>Augusta, GA</button>
-    <button class="quick-btn" onclick="loadQuick('Pinehurst')"><span class="flag">⛳</span>Pinehurst, NC</button>
-    <button class="quick-btn" onclick="loadQuick('Maui')"><span class="flag">🌺</span>Maui, HI</button>
-  </div>
-</div>
-
-<div class="main" id="main-content"></div>
-
-<div class="footer">
-  Weather data from <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Free & open source
 </div>
 
 <script>
+
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -647,7 +461,7 @@ function processWeather(data) {
   });
 }
 
-function renderApp(name, days) {
+function renderApp(name, days, query) {
   document.getElementById("quick-picks").style.display = "none";
   const today = days[0];
   const col = gradeColor(today.grade);
@@ -691,6 +505,9 @@ function renderApp(name, days) {
       </div>
       <div class="grade-title">${gradeTitle(today.grade)}</div>
       <div class="grade-desc">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
+      <button id="heart-btn" class="heart-btn" onclick="toggleFavorite(this.dataset.query, this.dataset.label)" data-query="${query||name}" data-label="${name}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save
+      </button>
     </div>
 
     <div class="section-label">Conditions breakdown</div>
@@ -724,6 +541,76 @@ function renderApp(name, days) {
     </div>
     <div class="scroll-outer"><div class="strip">${stripHTML}</div></div>
   `;
+  // Update heart button state
+  setTimeout(() => updateHeartBtn(query || name), 50);
+}
+
+
+// ── Favorites (localStorage) ──────────────────────────────
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('cc_favorites') || '[]'); }
+  catch { return []; }
+}
+function saveFavorites(favs) {
+  localStorage.setItem('cc_favorites', JSON.stringify(favs));
+}
+function isFavorite(query) {
+  return getFavorites().some(f => f.query === query);
+}
+function toggleFavorite(query, label) {
+  let favs = getFavorites();
+  if (isFavorite(query)) {
+    favs = favs.filter(f => f.query !== query);
+  } else {
+    favs.unshift({ query, label });
+    if (favs.length > 20) favs = favs.slice(0, 20);
+  }
+  saveFavorites(favs);
+  renderFavorites();
+  updateHeartBtn(query);
+}
+function renderFavorites() {
+  const favs = getFavorites();
+  const emptyMsg = '<div class="fav-empty">No favorites yet. Search a course and tap the heart to save it.</div>';
+  const itemsHtml = favs.length === 0 ? emptyMsg : favs.map(f => {
+    const q = f.query.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const l = f.label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="fav-item">
+      <button class="fav-name" onclick="loadFav('${q}','${l}')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 11C6 11 2 7.5 2 5a4 4 0 018 0c0 2.5-4 6-4 6z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+        ${f.label}
+      </button>
+      <button class="fav-remove" onclick="removeFav('${q}')">×</button>
+    </div>`;
+  }).join('');
+  const sidebar = document.getElementById('fav-sidebar');
+  const mobile = document.getElementById('fav-mobile');
+  if (sidebar) sidebar.querySelector('.fav-list').innerHTML = itemsHtml;
+  if (mobile) {
+    mobile.querySelector('.fav-list').innerHTML = itemsHtml;
+    mobile.style.display = favs.length > 0 ? 'block' : 'none';
+  }
+}
+function removeFav(query) {
+  let favs = getFavorites().filter(f => f.query !== query);
+  saveFavorites(favs);
+  renderFavorites();
+  updateHeartBtn(query);
+}
+function loadFav(query, label) {
+  document.getElementById('city-input').value = label;
+  run(query, label, true);
+}
+function updateHeartBtn(query) {
+  const btn = document.getElementById('heart-btn');
+  if (!btn) return;
+  const saved = isFavorite(query);
+  btn.innerHTML = saved
+    ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="#e24b4a"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Saved`
+    : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14s-6-3.75-6-8a4 4 0 018 0 4 4 0 018 0c0 4.25-6 8-6 8z"/></svg> Save`;
+  btn.style.color = saved ? '#e24b4a' : '';
+  btn.dataset.query = query;
+  btn.dataset.label = document.getElementById('city-input').value || query;
 }
 
 async function run(query, displayName, cityOverride) {
@@ -765,7 +652,7 @@ async function run(query, displayName, cityOverride) {
     const days = processWeather(weather);
     const name = displayName || (loc.name + (loc.admin1 ? ", " + loc.admin1 : ""));
     mc.innerHTML = "";
-    renderApp(name, days);
+    renderApp(name, days, query);
   } catch(e) {
     mc.innerHTML = "";
     document.getElementById("quick-picks").style.display = "block";
@@ -793,6 +680,10 @@ function loadQuick(q) {
 document.getElementById("city-input").addEventListener("keydown", e => {
   if (e.key === "Enter") searchCity();
 });
+
+// Init
+renderFavorites();
+
 </script>
 </body>
 </html>
