@@ -565,23 +565,15 @@ function renderHourlyStrip(dayIdx) {
     if (!scroller) return;
     const now = new Date();
     const currentHour = dayIdx === 0 ? now.getHours() : 8;
-    const CARD_STEP = 74;
     const firstHour = 6;
+    const lastHour = 20;
+    const numCards = lastHour - firstHour + 1; // 15 cards
+    // Measure actual card step from real scrollWidth
+    const CARD_STEP = scroller.scrollWidth / numCards;
+    // Scroll so prev hour (currentHour - 1) is the first visible card
     const prevHourIndex = Math.max(0, (currentHour - 1) - firstHour);
     const target = prevHourIndex * CARD_STEP;
-    
-    // Debug: show what we're trying to do
-    const dbg = document.createElement('div');
-    dbg.style = 'font-size:10px;color:red;padding:2px 4px;';
-    dbg.id = 'scroll-debug';
-    dbg.textContent = 'hour=' + currentHour + ' target=' + target + 'px scrollW=' + scroller.scrollWidth + ' clientW=' + scroller.clientWidth;
-    scroller.parentNode.insertBefore(dbg, scroller);
-    
     scroller.scrollTo({ left: target, behavior: 'instant' });
-    setTimeout(() => {
-      const dbg2 = document.getElementById('scroll-debug');
-      if (dbg2) dbg2.textContent += ' | actual=' + scroller.scrollLeft + 'px';
-    }, 200);
   }, 150);
 }
 
