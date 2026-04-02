@@ -468,48 +468,60 @@ function gradeDesc(g, wind, rain, temp) {
   return `Not ideal. Check the forecast below for a better window.`;
 }
 
-const COURSES = {
-  "pebble beach": "Monterey",
-  "augusta national": "Augusta",
-  "st andrews old course": "St Andrews",
-  "pinehurst": "Pinehurst",
-  "torrey pines": "San Diego",
-  "bethpage black": "Farmingdale",
-  "tpc scottsdale": "Scottsdale",
-  "kiawah island": "Kiawah Island",
-  "whistling straits": "Sheboygan",
-  "shinnecock hills": "Southampton",
-  "bay hill": "Orlando",
-  "riviera country club": "Pacific Palisades",
-  "tpc sawgrass": "Ponte Vedra Beach",
-  "muirfield village": "Dublin Ohio",
-  "oakmont": "Oakmont",
-  "winged foot": "Mamaroneck",
-  "quail hollow": "Charlotte",
-  "harbour town": "Hilton Head",
-  "kapalua": "Lahaina",
-  "bandon dunes": "Bandon",
-  "shadow creek": "Las Vegas",
-  "chambers bay": "Tacoma",
-};
+// Detect if query looks like a golf course (not just a city)
+function looksLikeCourse(q) {
+  const lower = q.toLowerCase();
+  const courseWords = ["club", "course", "golf", "links", "national", "country", "pines", "dunes", "ridge", "valley", "hills", "bay", "harbor", "harbour", "creek", "meadow", "woods", "forest", "resort", "beach", "manor", "estate", "springs", "ranch", "farm", "island", "point", "cove", "bluff", "highlands", "plantation", "preserve", "oaks", "pines", "glen", "knoll", "moor"];
+  return courseWords.some(w => lower.includes(w));
+}
 
-function cleanQuery(raw) {
-  const lower = raw.toLowerCase().trim();
-  for (const [course, city] of Object.entries(COURSES)) {
-    if (lower.includes(course)) return city;
-  }
-  // Strip ", AZ" style abbreviations -> just use city name
+function cleanCityQuery(raw) {
+  // Strip ", AZ" style abbreviations
   const abbr = raw.match(/^(.+),\s*([A-Z]{2})$/);
   if (abbr) return abbr[1].trim();
-  // Remove commas so "Scottsdale, Arizona" -> "Scottsdale Arizona"
+  // Remove commas
   return raw.replace(/,/g, " ").replace(/\s+/g, " ").trim();
 }
 
-async function geocode(raw) {
-  const q = cleanQuery(raw);
+async function lookupCourseWithClaude(courseName) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: `I need to find the location of a golf course to get weather data. The user searched for: "${courseName}"
+
+Please identify this golf course and return ONLY a JSON object (no markdown, no explanation) in this format:
+{
+  "found": true,
+  "courses": [
+    { "name": "Full Course Name", "city": "City", "state": "State or Country", "searchCity": "City name to search for weather" }
+  ]
+}
+
+If you find multiple possible matches, include all of them (up to 4). If you cannot identify any golf course from this query, return { "found": false }.
+
+The "searchCity" field should be just the city name, suitable for a weather API lookup.`
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data.content?.[0]?.text || "";
+  try {
+    return JSON.parse(text.trim());
+  } catch {
+    return { found: false };
+  }
+}
+
+async function geocode(cityName) {
+  const q = cleanCityQuery(cityName);
   const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
   const d = await r.json();
-  if (!d.results || !d.results.length) throw new Error("Location not found. Try just the city name, e.g. \"Scottsdale\" or \"Chicago\".");
+  if (!d.results || !d.results.length) throw new Error("Location not found. Try just the city name.");
   return d.results[0];
 }
 
@@ -616,13 +628,43 @@ function renderApp(name, days) {
   `;
 }
 
-async function run(query, displayName) {
+async function run(query, displayName, cityOverride) {
   const mc = document.getElementById("main-content");
   const inlineErr = document.getElementById("inline-error");
   inlineErr.style.display = "none";
   inlineErr.innerHTML = "";
-  mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
   document.getElementById("quick-picks").style.display = "none";
+
+  // If it looks like a course, ask Claude to identify it
+  if (!cityOverride && looksLikeCourse(query)) {
+    mc.innerHTML = `<div class="loading">Looking up course<span class="loading-dots"></span></div>`;
+    try {
+      const result = await lookupCourseWithClaude(query);
+      if (result.found && result.courses && result.courses.length > 0) {
+        if (result.courses.length === 1) {
+          const course = result.courses[0];
+          const label = course.name + " — " + course.city + ", " + course.state;
+          return run(course.searchCity, label, true);
+        } else {
+          mc.innerHTML = "";
+          document.getElementById("quick-picks").style.display = "block";
+          inlineErr.style.display = "block";
+          const chips = result.courses.map(c => {
+            const label = c.name + " — " + c.city + ", " + c.state;
+            const safe = label.replace(/'/g, "\'");
+            return `<button class="chip" onclick="run('${c.searchCity}', '${safe}', true)">${c.name} <span style="opacity:0.6;font-size:11px">${c.city}, ${c.state}</span></button>`;
+          }).join("");
+          inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
+            <p style="color:var(--blue-dark)">Found a few matches — which one?</p>
+            <div class="suggestion-chips">${chips}</div>
+          </div>`;
+          return;
+        }
+      }
+    } catch(e) { /* fall through */ }
+  }
+
+  mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
   try {
     const loc = await geocode(query);
     const weather = await fetchWeather(loc.latitude, loc.longitude);
@@ -637,7 +679,7 @@ async function run(query, displayName) {
     const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join("");
     inlineErr.style.display = "block";
     inlineErr.innerHTML = `<div class="inline-error">
-      <p>Couldn't find that location. Try one of these or use just the city name:</p>
+      <p>Couldn't find that. Try a city name or a well-known course name:</p>
       <div class="suggestion-chips">${chips}</div>
     </div>`;
   }
