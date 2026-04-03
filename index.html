@@ -185,6 +185,21 @@
     .footer { text-align: center; margin-top: 2rem; font-size: 12px; color: var(--text-tertiary); }
     .footer a { color: var(--green-mid); text-decoration: none; }
 
+    /* ── Day nav arrows ── */
+    .day-nav { display: flex; align-items: stretch; gap: 0; margin-bottom: 1rem; }
+    .day-nav-arrow {
+      flex-shrink: 0; width: 40px; display: flex; align-items: center; justify-content: center;
+      background: var(--card); border: 1px solid var(--border); cursor: pointer;
+      color: var(--text-secondary); font-size: 16px; transition: all 0.15s;
+      font-family: 'DM Sans', sans-serif; padding: 0;
+    }
+    .day-nav-arrow:first-child { border-radius: var(--radius) 0 0 var(--radius); border-right: none; }
+    .day-nav-arrow:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
+    .day-nav-arrow:hover:not(:disabled) { background: var(--green-light); color: var(--green-mid); border-color: var(--green-border); }
+    .day-nav-arrow:disabled { opacity: 0.25; cursor: default; }
+    .day-nav-card { flex: 1; }
+    .day-nav-card .grade-card { margin-bottom: 0; border-radius: 0; border-left: none; border-right: none; }
+
     /* ── Action buttons row ── */
     .action-row { display: flex; gap: 8px; margin-bottom: 1.25rem; justify-content: center; }
     .action-btn {
@@ -1114,6 +1129,24 @@ function renderDayStrip() {
   document.getElementById('day-strip').innerHTML = html;
 }
 
+function navDay(dir) {
+  const next = _selectedDay + dir;
+  if (next < 0 || next >= _days.length) return;
+  selectDay(next);
+  // Scroll day strip to keep selected card visible
+  setTimeout(() => {
+    const card = document.querySelectorAll('.day-card')[next];
+    if (card) card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, 100);
+}
+
+function updateNavArrows() {
+  const prev = document.getElementById('day-prev');
+  const next = document.getElementById('day-next');
+  if (prev) prev.disabled = _selectedDay === 0;
+  if (next) next.disabled = _selectedDay >= _days.length - 1;
+}
+
 function selectDay(idx) {
   _selectedDay = idx;
   const day = _days[idx];
@@ -1163,6 +1196,7 @@ function selectDay(idx) {
   // Update hourly + tee optimizer
   renderHourlyStrip(idx);
   renderTeeOptimizer(idx);
+  updateNavArrows();
 }
 
 function gradeDesc(g, wind, rain, temp) {
@@ -1205,7 +1239,10 @@ function renderApp(name, days, query) {
     </div>
     <div style="font-size:18px;font-weight:600;color:var(--text);margin:-0.25rem 0 1rem;letter-spacing:-0.3px" id="selected-date">${dateStr}</div>
 
-    <div class="grade-card" id="grade-card" style="background:${col.bg};border-color:${col.border}">
+    <div class="day-nav">
+      <button class="day-nav-arrow" id="day-prev" onclick="navDay(-1)" ${startDay === 0 ? 'disabled' : ''}>‹</button>
+      <div class="day-nav-card" style="flex:1">
+      <div class="grade-card" id="grade-card" style="background:${col.bg};border-color:${col.border};border-radius:0;border-left:none;border-right:none;margin-bottom:0">
       <div class="grade-circle" id="grade-circle" style="background:white;color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
       <div class="grade-title" id="grade-title" style="color:${col.text}">${gradeTitle(today.grade)}</div>
       <div class="grade-desc" id="grade-desc" style="color:${col.text};opacity:0.75">${gradeDesc(today.grade, today.wind, today.rain, today.temp)}</div>
@@ -1217,6 +1254,9 @@ function renderApp(name, days, query) {
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="3" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="12" cy="13" r="1.5"/><line x1="5.5" y1="7" x2="10.5" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="9" x2="10.5" y2="12" stroke="currentColor" stroke-width="1.5"/></svg> Share
         </button>
       </div>
+    </div>
+      </div>
+      <button class="day-nav-arrow" id="day-next" onclick="navDay(1)">›</button>
     </div>
 
     <div class="section-label">Hourly forecast</div>
@@ -1267,6 +1307,7 @@ function renderApp(name, days, query) {
   if (savedTee) _teeLength = parseFloat(savedTee);
 
   _selectedDay = 0;
+  const startDay = 0;
 
   renderDayStrip();
   renderHourlyStrip(0);
