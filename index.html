@@ -413,11 +413,11 @@
     <div id="sidebar-popular" style="margin-top:1rem;display:none">
       <div class="sidebar-divider"></div>
       <div class="sidebar-popular-label">Popular</div>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Scottsdale Arizona')">🌵 Scottsdale, AZ</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Monterey California')">🌊 Monterey, CA</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('St Andrews Scotland')">🏴󠁧󠁢󠁳󠁣󠁴󠁿 St Andrews</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Augusta Georgia')">🍑 Augusta, GA</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Pinehurst North Carolina')">⛳ Pinehurst, NC</button>
+      <button class="sidebar-quick-btn" onclick="runLatLon(33.4942,-111.9261,'Scottsdale, AZ')">🌵 Scottsdale, AZ</button>
+      <button class="sidebar-quick-btn" onclick="runLatLon(36.6002,-121.8947,'Monterey, CA')">🌊 Monterey, CA</button>
+      <button class="sidebar-quick-btn" onclick="runLatLon(56.3398,-2.7967,'St Andrews, Scotland')">🏴󠁧󠁢󠁳󠁣󠁴󠁿 St Andrews</button>
+      <button class="sidebar-quick-btn" onclick="runLatLon(33.4735,-82.0105,'Augusta, GA')">🍑 Augusta, GA</button>
+      <button class="sidebar-quick-btn" onclick="runLatLon(35.1954,-79.4695,'Pinehurst, NC')">⛳ Pinehurst, NC</button>
     </div>
   </aside>
 
@@ -447,12 +447,12 @@
     <div class="quick-picks" id="quick-picks">
       <div class="quick-label">Popular searches</div>
       <div class="quick-grid">
-        <button class="quick-btn" onclick="loadQuick('Scottsdale Arizona')"><span class="flag">🌵</span>Scottsdale, AZ</button>
-        <button class="quick-btn" onclick="loadQuick('Monterey California')"><span class="flag">🌊</span>Monterey, CA</button>
-        <button class="quick-btn" onclick="loadQuick('St Andrews Scotland')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
-        <button class="quick-btn" onclick="loadQuick('Augusta Georgia')"><span class="flag">🍑</span>Augusta, GA</button>
-        <button class="quick-btn" onclick="loadQuick('Pinehurst North Carolina')"><span class="flag">⛳</span>Pinehurst, NC</button>
-        <button class="quick-btn" onclick="loadQuick('Maui Hawaii')"><span class="flag">🌺</span>Maui, HI</button>
+        <button class="quick-btn" onclick="runLatLon(33.4942,-111.9261,'Scottsdale, AZ')"><span class="flag">🌵</span>Scottsdale, AZ</button>
+        <button class="quick-btn" onclick="runLatLon(36.6002,-121.8947,'Monterey, CA')"><span class="flag">🌊</span>Monterey, CA</button>
+        <button class="quick-btn" onclick="runLatLon(56.3398,-2.7967,'St Andrews, Scotland')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
+        <button class="quick-btn" onclick="runLatLon(33.4735,-82.0105,'Augusta, GA')"><span class="flag">🍑</span>Augusta, GA</button>
+        <button class="quick-btn" onclick="runLatLon(35.1954,-79.4695,'Pinehurst, NC')"><span class="flag">⛳</span>Pinehurst, NC</button>
+        <button class="quick-btn" onclick="runLatLon(20.7984,-156.3319,'Maui, HI')"><span class="flag">🌺</span>Maui, HI</button>
       </div>
     </div>
 
@@ -1538,8 +1538,15 @@ async function run(query, displayName, cityOverride) {
   } catch(e) {
     mc.innerHTML = '';
     document.getElementById('quick-picks').style.display = 'block';
-    const suggestions = ['Scottsdale', 'Chicago', 'Monterey', 'St Andrews', 'Augusta', 'Pinehurst'];
-    const chips = suggestions.map(s => `<button class="chip" onclick="loadQuick('${s}')">${s}</button>`).join('');
+    const suggestions = [
+      {label:'Scottsdale', lat:33.4942, lon:-111.9261},
+      {label:'Chicago', lat:41.8781, lon:-87.6298},
+      {label:'Monterey', lat:36.6002, lon:-121.8947},
+      {label:'St Andrews', lat:56.3398, lon:-2.7967},
+      {label:'Augusta', lat:33.4735, lon:-82.0105},
+      {label:'Pinehurst', lat:35.1954, lon:-79.4695},
+    ];
+    const chips = suggestions.map(s => `<button class="chip" onclick="runLatLon(${s.lat},${s.lon},'${s.label}')">${s.label}</button>`).join('');
     inlineErr.style.display = 'block';
     const errMsg = e.message && e.message.length < 120 ? e.message : "Couldn't load weather for that location.";
     inlineErr.innerHTML = `<div class="inline-error">
