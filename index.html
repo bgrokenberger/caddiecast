@@ -279,6 +279,7 @@
       cursor: pointer; transition: border-color 0.15s;
     }
     .hr-card.hr-past { opacity: 0.32; }
+    .hr-card.hr-night { opacity: 0.45; background: var(--bg); }
     .hr-card.hr-selected { border-color: var(--green-mid); border-width: 2px; background: var(--green-light); }
     .hr-card:hover:not(.hr-past) { border-color: var(--green-border); }
     .hr-time { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }
@@ -419,7 +420,7 @@
     </div>
 
     <div class="quick-picks" id="quick-picks">
-      <div class="quick-label">Popular courses</div>
+      <div class="quick-label">Popular searches</div>
       <div class="quick-grid">
         <button class="quick-btn" onclick="loadQuick('Scottsdale')"><span class="flag">🌵</span>Scottsdale, AZ</button>
         <button class="quick-btn" onclick="loadQuick('Monterey')"><span class="flag">🌊</span>Monterey, CA</button>
@@ -532,10 +533,11 @@ function gradeTitle(g) {
 }
 
 // Best 4-hour window score
-function bestWindow(hours) {
-  // hours is array of {hour, score, grade, wind, rain, temp, humid}
-  // Only consider 6am-7pm (hours 6-19)
-  const playable = hours.filter(h => h.hour >= 6 && h.hour <= 19);
+function bestWindow(hours, sunriseHour, sunsetHour) {
+  const rise = sunriseHour !== undefined ? sunriseHour : 6;
+  const set = sunsetHour !== undefined ? sunsetHour : 19;
+  // Only consider daylight hours (sunrise to 1hr before sunset for a full window)
+  const playable = hours.filter(h => h.hour >= rise && h.hour < set);
   if (!playable.length) return null;
   let best = null, bestScore = -1;
   for (let i = 0; i <= playable.length - 4; i++) {
@@ -695,12 +697,12 @@ async function geocode(raw) {
 async function fetchWeather(lat, lon) {
   const mainUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
     + `&hourly=temperature_2m,precipitation_probability,precipitation,windspeed_10m,relativehumidity_2m`
-    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum`
+    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum,sunrise,sunset`
     + `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
 
   // Ensemble API for days 17-21 (free, less precise but good enough for extended outlook)
   const ensembleUrl = `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${lat}&longitude=${lon}`
-    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum`
+    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,precipitation_sum,sunrise,sunset`
     + `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=21&timezone=auto&models=gfs_seamless`;
 
   const [mainRes, ensRes] = await Promise.all([fetch(mainUrl), fetch(ensembleUrl)]);
@@ -746,20 +748,34 @@ function processWeather(data) {
     const avgScore = playableHours.length
       ? Math.round(playableHours.reduce((s,h) => s + h.score, 0) / playableHours.length)
       : 50;
-    const window = bestWindow(dayHours);
+    // Parse sunrise/sunset hours for this day
+    const sunriseStr = d.sunrise ? d.sunrise[i] : null;
+    const sunsetStr = d.sunset ? d.sunset[i] : null;
+    const sunriseHour = sunriseStr ? new Date(sunriseStr).getHours() : 6;
+    const sunsetHour = sunsetStr ? new Date(sunsetStr).getHours() : 19;
+
+    // Recalculate playable hours using actual sunrise/sunset
+    const sunPlayable = dayHours.filter(h => h.hour >= sunriseHour && h.hour < sunsetHour);
+    const sunAvgScore = sunPlayable.length
+      ? Math.round(sunPlayable.reduce((s,h) => s + h.score, 0) / sunPlayable.length)
+      : avgScore;
+
+    const window = bestWindow(dayHours, sunriseHour, sunsetHour);
     const totalRainMm = d.precipitation_sum ? (d.precipitation_sum[i] || 0) : 0;
     return {
       date,
       temp: (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2,
       wind: d.windspeed_10m_max[i] || 0,
       rain: d.precipitation_probability_max[i] || 0,
-      rainVol: playableHours.length ? playableHours.reduce((s,h) => s+h.rainVol,0) : 0,
+      rainVol: sunPlayable.length ? sunPlayable.reduce((s,h) => s+h.rainVol,0) : 0,
       totalRainMm,
-      humid: playableHours.length ? Math.round(playableHours.reduce((s,h) => s+h.humid,0)/playableHours.length) : 50,
-      score: avgScore,
-      grade: gradeFromScore(avgScore),
+      humid: sunPlayable.length ? Math.round(sunPlayable.reduce((s,h) => s+h.humid,0)/sunPlayable.length) : 50,
+      score: sunAvgScore,
+      grade: gradeFromScore(sunAvgScore),
       hours: dayHours,
       bestWindow: window,
+      sunriseHour,
+      sunsetHour,
     };
   });
   // Append ensemble extended forecast days 17-21
@@ -811,7 +827,9 @@ const TEE_OPTIONS = [
 function calcTeeWindows(dayIdx, roundHours) {
   const day = _days[dayIdx];
   if (!day || !day.hours) return [];
-  const playable = day.hours.filter(h => h.hour >= 6 && h.hour <= 19);
+  const rise = day.sunriseHour !== undefined ? day.sunriseHour : 6;
+  const set = day.sunsetHour !== undefined ? day.sunsetHour : 19;
+  const playable = day.hours.filter(h => h.hour >= rise && h.hour < set);
   const slots = Math.ceil(roundHours);
   const results = [];
   const now = new Date();
@@ -937,29 +955,37 @@ function renderHourlyStrip(dayIdx) {
       </div>`;
     return;
   }
-  const hours = day.hours.filter(h => h.hour >= 6 && h.hour <= 20);
+  const sunriseH = day.sunriseHour !== undefined ? day.sunriseHour : 6;
+  const sunsetH = day.sunsetHour !== undefined ? day.sunsetHour : 19;
+  const hours = day.hours.filter(h => h.hour >= Math.max(5, sunriseH - 1) && h.hour <= Math.min(21, sunsetH + 1));
   const now = new Date();
   const isToday = dayIdx === 0;
 
   const stripHTML = hours.map((h, idx) => {
     const gc = gradeColor(h.grade);
     const isPast = isToday && h.hour < now.getHours();
+    const isNight = h.hour < sunriseH || h.hour >= sunsetH;
     const rainColor = h.rain>40?'#A32D2D':h.rain>20?'#854F0B':'#999';
-    return `<div class="hr-card ${isPast ? 'hr-past' : ''}" id="hr-${dayIdx}-${h.hour}" onclick="selectHour(${dayIdx},${h.hour})">
+    return `<div class="hr-card ${isPast ? 'hr-past' : ''} ${isNight ? 'hr-night' : ''}" id="hr-${dayIdx}-${h.hour}" onclick="selectHour(${dayIdx},${h.hour})">
       <div class="hr-time">${fmtHour(h.hour)}</div>
-      <div class="hr-grade" style="color:${gc.text};background:${gc.bg};border-color:${gc.border}">${h.grade}</div>
+      <div class="hr-grade" style="color:${isNight ? 'var(--text-tertiary)' : gc.text};background:${isNight ? 'var(--bg)' : gc.bg};border-color:${isNight ? 'var(--border)' : gc.border}">${isNight ? '—' : h.grade}</div>
       <div class="hr-temp">${Math.round(h.temp)}°</div>
-      <div class="hr-rain" style="color:${rainColor}">${Math.round(h.rain)}%</div>
-      <div class="hr-wind">${Math.round(h.wind)}mph</div>
+      <div class="hr-rain" style="color:${rainColor}">${isNight ? '' : Math.round(h.rain)+'%'}</div>
+      <div class="hr-wind">${isNight ? '🌙' : Math.round(h.wind)+'mph'}</div>
     </div>`;
   }).join('');
 
   const win = day.bestWindow;
+  const fmtSun = h => { const ampm = h >= 12 ? 'pm' : 'am'; return (h > 12 ? h-12 : h || 12) + ampm; };
+  const sunInfo = day.sunriseHour !== undefined
+    ? `<span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;display:flex;align-items:center;gap:8px"><span>🌅 ${fmtSun(day.sunriseHour)}</span><span>🌇 ${fmtSun(day.sunsetHour)}</span></span>`
+    : '';
   const winHtml = win ? `<div class="best-window">
     <span class="bw-label">Best window</span>
     <span class="bw-time">${win.label}</span>
     <span class="bw-grade" style="color:${gradeColor(win.grade).text};background:${gradeColor(win.grade).bg}">${win.grade}</span>
-  </div>` : '';
+    ${sunInfo}
+  </div>` : `<div class="best-window">${sunInfo}</div>`;
 
   document.getElementById('hourly-section').innerHTML = `
     ${winHtml}
