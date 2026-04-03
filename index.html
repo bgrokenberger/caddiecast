@@ -1140,6 +1140,15 @@ function selectDay(idx) {
     ? `Extended outlook for ${dateStr}. Less reliable — check back closer to the date.`
     : gradeDesc(day.grade, day.wind, day.rain, day.temp);
   document.getElementById('selected-date').textContent = dateStr;
+  // Highlight "Tomorrow" or "Today" label
+  const now2 = new Date();
+  const todayStr = now2.toISOString().split('T')[0];
+  const tomorrow = new Date(now2); tomorrow.setDate(now2.getDate()+1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const dateEl = document.getElementById('selected-date');
+  if (day.date === todayStr) dateEl.textContent = 'Today · ' + dateStr;
+  else if (day.date === tomorrowStr) dateEl.textContent = 'Tomorrow · ' + dateStr;
+  else dateEl.textContent = dateStr;
 
   // Update factors via shared function
   const totalIn = day.totalRainMm ? mmToInches(day.totalRainMm) : '0.00';
@@ -1182,13 +1191,19 @@ function renderApp(name, days, query) {
   const [rvLbl,rvCls] = rainVolLabel(today.rainVol || 0);
   const [tLbl,tCls] = factorLabel('temp', today.temp);
   const [hLbl,hCls] = factorLabel('humid', today.humid);
-  const dateStr = new Date(today.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const now = new Date();
+  const todayDateStr = now.toISOString().split('T')[0];
+  const tomorrowDate = new Date(now); tomorrowDate.setDate(now.getDate()+1);
+  const tomorrowDateStr = tomorrowDate.toISOString().split('T')[0];
+  const rawDateStr = new Date(today.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const dateStr = today.date === todayDateStr ? 'Today · ' + rawDateStr : today.date === tomorrowDateStr ? 'Tomorrow · ' + rawDateStr : rawDateStr;
 
   document.getElementById('main-content').innerHTML = `
     <div class="location-line">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 11C6 11 2 7.5 2 5a4 4 0 018 0c0 2.5-4 6-4 6z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
-      ${name} &nbsp;·&nbsp; <span id="selected-date">${dateStr}</span>
+      ${name}
     </div>
+    <div style="font-size:18px;font-weight:600;color:var(--text);margin:-0.25rem 0 1rem;letter-spacing:-0.3px" id="selected-date">${dateStr}</div>
 
     <div class="grade-card" id="grade-card" style="background:${col.bg};border-color:${col.border}">
       <div class="grade-circle" id="grade-circle" style="background:white;color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
@@ -1251,9 +1266,25 @@ function renderApp(name, days, query) {
   const savedTee = localStorage.getItem('cc_tee_length');
   if (savedTee) _teeLength = parseFloat(savedTee);
 
+  // Auto-advance to tomorrow if we're past today's sunset
+  let startDay = 0;
+  if (days[0] && days[0].sunsetHour !== undefined) {
+    const now = new Date();
+    if (now.getHours() >= days[0].sunsetHour) {
+      startDay = 1;
+    }
+  }
+  _selectedDay = startDay;
+
   renderDayStrip();
-  renderHourlyStrip(0);
-  renderTeeOptimizer(0);
+  renderHourlyStrip(startDay);
+  renderTeeOptimizer(startDay);
+
+  // If showing tomorrow, update the grade card to reflect tomorrow's data
+  if (startDay === 1 && days[1]) {
+    setTimeout(() => selectDay(1), 0);
+  }
+
   setTimeout(() => updateHeartBtn(query || name), 50);
 }
 
