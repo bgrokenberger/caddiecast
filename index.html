@@ -1180,15 +1180,14 @@ function selectDay(idx) {
   document.getElementById('grade-desc').textContent = (isFarOut || day.isEnsemble)
     ? `Extended outlook for ${dateStr}. Less reliable — check back closer to the date.`
     : gradeDesc(day.grade, day.wind, day.rain, day.temp);
-  document.getElementById('selected-date').textContent = dateStr;
-  // Highlight "Tomorrow" or "Today" label
+  // Only show Today/Tomorrow on day 0/1, plain date when navigating
   const now2 = new Date();
-  const todayStr = now2.toISOString().split('T')[0];
-  const tomorrow = new Date(now2); tomorrow.setDate(now2.getDate()+1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const todayStr2 = now2.toISOString().split('T')[0];
+  const tomorrow2 = new Date(now2); tomorrow2.setDate(now2.getDate()+1);
+  const tomorrowStr2 = tomorrow2.toISOString().split('T')[0];
   const dateEl = document.getElementById('selected-date');
-  if (day.date === todayStr) dateEl.textContent = 'Today · ' + dateStr;
-  else if (day.date === tomorrowStr) dateEl.textContent = 'Tomorrow · ' + dateStr;
+  if (idx === 0 && day.date === todayStr2) dateEl.textContent = 'Today · ' + dateStr;
+  else if (idx === 1 && day.date === tomorrowStr2) dateEl.textContent = 'Tomorrow · ' + dateStr;
   else dateEl.textContent = dateStr;
 
   // Update factors via shared function
