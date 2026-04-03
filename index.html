@@ -1266,33 +1266,11 @@ function renderApp(name, days, query) {
   const savedTee = localStorage.getItem('cc_tee_length');
   if (savedTee) _teeLength = parseFloat(savedTee);
 
-  // Auto-advance to tomorrow if we're past today's sunset
-  const nowHour = new Date().getHours();
-  const todaySunset = days[0] && days[0].sunsetHour !== undefined ? days[0].sunsetHour : 20;
-  const startDay = (nowHour >= todaySunset && days[1]) ? 1 : 0;
-  _selectedDay = startDay;
+  _selectedDay = 0;
 
   renderDayStrip();
-  renderHourlyStrip(startDay);
-  renderTeeOptimizer(startDay);
-
-  // Update grade card for the correct starting day without re-triggering selectDay loop
-  if (startDay > 0) {
-    const day = days[startDay];
-    const col = gradeColor(day.grade);
-    const dt = new Date(day.date + 'T12:00:00');
-    const ds = dt.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
-    const gc = document.getElementById('grade-card');
-    if (gc) { gc.style.background = col.bg; gc.style.borderColor = col.border; }
-    const circle = document.getElementById('grade-circle');
-    if (circle) { circle.style.color = col.text; circle.style.border = '2px solid ' + col.border; circle.textContent = day.grade; }
-    const gt = document.getElementById('grade-title');
-    if (gt) { gt.style.color = col.text; gt.textContent = gradeTitle(day.grade); }
-    const gd = document.getElementById('grade-desc');
-    if (gd) { gd.style.color = col.text; gd.textContent = gradeDesc(day.grade, day.wind, day.rain, day.temp); }
-    const sd = document.getElementById('selected-date');
-    if (sd) sd.textContent = 'Tomorrow · ' + ds;
-  }
+  renderHourlyStrip(0);
+  renderTeeOptimizer(0);
 
   setTimeout(() => updateHeartBtn(query || name), 50);
 }
