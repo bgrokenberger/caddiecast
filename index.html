@@ -186,19 +186,21 @@
     .footer a { color: var(--green-mid); text-decoration: none; }
 
     /* ── Day nav arrows ── */
-    .day-nav { display: flex; align-items: stretch; gap: 0; margin-bottom: 1rem; }
+    .day-nav { position: relative; margin-bottom: 1rem; }
     .day-nav-arrow {
-      flex-shrink: 0; width: 40px; display: flex; align-items: center; justify-content: center;
-      background: var(--card); border: 1px solid var(--border); cursor: pointer;
-      color: var(--text-secondary); font-size: 16px; transition: all 0.15s;
-      font-family: 'DM Sans', sans-serif; padding: 0;
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.85); border: 1px solid var(--border);
+      cursor: pointer; color: var(--text-secondary); font-size: 14px;
+      font-family: 'DM Sans', sans-serif; z-index: 2;
+      transition: all 0.15s; backdrop-filter: blur(4px);
     }
-    .day-nav-arrow:first-child { border-radius: var(--radius) 0 0 var(--radius); border-right: none; }
-    .day-nav-arrow:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
-    .day-nav-arrow:hover:not(:disabled) { background: var(--green-light); color: var(--green-mid); border-color: var(--green-border); }
-    .day-nav-arrow:disabled { opacity: 0.25; cursor: default; }
-    .day-nav-card { flex: 1; }
-    .day-nav-card .grade-card { margin-bottom: 0; border-radius: 0; border-left: none; border-right: none; }
+    .day-nav-arrow:first-child { left: 10px; }
+    .day-nav-arrow:last-child  { right: 10px; }
+    .day-nav-arrow:hover:not(:disabled) { background: white; color: var(--green-mid); border-color: var(--green-border); }
+    .day-nav-arrow:disabled { opacity: 0; pointer-events: none; }
+    .day-nav-card .grade-card { margin-bottom: 0; }
 
     /* ── Action buttons row ── */
     .action-row { display: flex; gap: 8px; margin-bottom: 1.25rem; justify-content: center; }
@@ -411,11 +413,11 @@
     <div id="sidebar-popular" style="margin-top:1rem;display:none">
       <div class="sidebar-divider"></div>
       <div class="sidebar-popular-label">Popular</div>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Scottsdale')">🌵 Scottsdale, AZ</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Monterey')">🌊 Monterey, CA</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('St Andrews')">🏴󠁧󠁢󠁳󠁣󠁴󠁿 St Andrews</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Augusta')">🍑 Augusta, GA</button>
-      <button class="sidebar-quick-btn" onclick="loadQuick('Pinehurst')">⛳ Pinehurst, NC</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Scottsdale Arizona')">🌵 Scottsdale, AZ</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Monterey California')">🌊 Monterey, CA</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('St Andrews Scotland')">🏴󠁧󠁢󠁳󠁣󠁴󠁿 St Andrews</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Augusta Georgia')">🍑 Augusta, GA</button>
+      <button class="sidebar-quick-btn" onclick="loadQuick('Pinehurst North Carolina')">⛳ Pinehurst, NC</button>
     </div>
   </aside>
 
@@ -445,12 +447,12 @@
     <div class="quick-picks" id="quick-picks">
       <div class="quick-label">Popular searches</div>
       <div class="quick-grid">
-        <button class="quick-btn" onclick="loadQuick('Scottsdale')"><span class="flag">🌵</span>Scottsdale, AZ</button>
-        <button class="quick-btn" onclick="loadQuick('Monterey')"><span class="flag">🌊</span>Monterey, CA</button>
-        <button class="quick-btn" onclick="loadQuick('St Andrews')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
-        <button class="quick-btn" onclick="loadQuick('Augusta')"><span class="flag">🍑</span>Augusta, GA</button>
-        <button class="quick-btn" onclick="loadQuick('Pinehurst')"><span class="flag">⛳</span>Pinehurst, NC</button>
-        <button class="quick-btn" onclick="loadQuick('Maui')"><span class="flag">🌺</span>Maui, HI</button>
+        <button class="quick-btn" onclick="loadQuick('Scottsdale Arizona')"><span class="flag">🌵</span>Scottsdale, AZ</button>
+        <button class="quick-btn" onclick="loadQuick('Monterey California')"><span class="flag">🌊</span>Monterey, CA</button>
+        <button class="quick-btn" onclick="loadQuick('St Andrews Scotland')"><span class="flag">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>St Andrews</button>
+        <button class="quick-btn" onclick="loadQuick('Augusta Georgia')"><span class="flag">🍑</span>Augusta, GA</button>
+        <button class="quick-btn" onclick="loadQuick('Pinehurst North Carolina')"><span class="flag">⛳</span>Pinehurst, NC</button>
+        <button class="quick-btn" onclick="loadQuick('Maui Hawaii')"><span class="flag">🌺</span>Maui, HI</button>
       </div>
     </div>
 
@@ -1133,11 +1135,17 @@ function navDay(dir) {
   const next = _selectedDay + dir;
   if (next < 0 || next >= _days.length) return;
   selectDay(next);
-  // Scroll day strip to keep selected card visible
+  // Just sync the day strip scroll position — don't scroll the page
   setTimeout(() => {
-    const card = document.querySelectorAll('.day-card')[next];
-    if (card) card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }, 100);
+    const strip = document.getElementById('day-strip');
+    const card = strip && strip.querySelectorAll('.day-card')[next];
+    if (card && strip.parentElement) {
+      const scroller = strip.parentElement;
+      const cardLeft = card.offsetLeft;
+      const scrollerWidth = scroller.clientWidth;
+      scroller.scrollLeft = cardLeft - scrollerWidth / 2 + card.offsetWidth / 2;
+    }
+  }, 50);
 }
 
 function updateNavArrows() {
