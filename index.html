@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CaddieCast — Golf Weather App</title>
+  <!-- Google Analytics — replace G-XXXXXXXXXX with your Measurement ID from analytics.google.com -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -643,6 +651,10 @@ const COURSE_DB = {
   "sea island":{ name:"Sea Island Golf Club", city:"St Simons Island", state:"GA" },
   "yeamans hall":{ name:"Yeamans Hall Club", city:"Hanahan", state:"SC" },
   "brook hollow":{ name:"Brook Hollow Golf Club", city:"Dallas", state:"TX" },
+  "trinity forest":{ name:"Trinity Forest Golf Club", city:"Dallas", state:"TX", lat:32.6957, lon:-96.7192 },
+  "trinity forest golf":{ name:"Trinity Forest Golf Club", city:"Dallas", state:"TX", lat:32.6957, lon:-96.7192 },
+  "tpc craig ranch":{ name:"TPC Craig Ranch", city:"McKinney", state:"TX", lat:33.1137, lon:-96.7082 },
+  "at&t byron nelson":{ name:"TPC Craig Ranch", city:"McKinney", state:"TX", lat:33.1137, lon:-96.7082 },
   "dallas national":{ name:"Dallas National Golf Club", city:"Dallas", state:"TX" },
   "las vegas paiute":{ name:"Las Vegas Paiute Golf Resort", city:"Las Vegas", state:"NV" },
   "wolf creek":{ name:"Wolf Creek Golf Club", city:"Mesquite", state:"NV" },
