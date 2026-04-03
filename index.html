@@ -1240,7 +1240,7 @@ function renderApp(name, days, query) {
     <div style="font-size:18px;font-weight:600;color:var(--text);margin:-0.25rem 0 1rem;letter-spacing:-0.3px" id="selected-date">${dateStr}</div>
 
     <div class="day-nav">
-      <button class="day-nav-arrow" id="day-prev" onclick="navDay(-1)" ${startDay === 0 ? 'disabled' : ''}>‹</button>
+      <button class="day-nav-arrow" id="day-prev" onclick="navDay(-1)" disabled>‹</button>
       <div class="day-nav-card" style="flex:1">
       <div class="grade-card" id="grade-card" style="background:${col.bg};border-color:${col.border};border-radius:0;border-left:none;border-right:none;margin-bottom:0">
       <div class="grade-circle" id="grade-circle" style="background:white;color:${col.text};border:2px solid ${col.border}">${today.grade}</div>
@@ -1307,12 +1307,12 @@ function renderApp(name, days, query) {
   if (savedTee) _teeLength = parseFloat(savedTee);
 
   _selectedDay = 0;
-  const startDay = 0;
 
   renderDayStrip();
   renderHourlyStrip(0);
   renderTeeOptimizer(0);
 
+  updateNavArrows();
   setTimeout(() => updateHeartBtn(query || name), 50);
 }
 
