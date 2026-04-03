@@ -581,9 +581,11 @@ function bestWindow(hours, sunriseHour, sunsetHour) {
 // ── Overpass API course lookup ───────────────────────────
 async function searchCourseOverpass(query) {
   const escaped = query.replace(/["'\\]/g, '').trim();
-  // Also try key words from the query for broader matching
-  const words = escaped.split(/\s+/).filter(w => w.length > 3 && !['golf','club','course','links','country','national'].includes(w.toLowerCase()));
-  const nameFilter = words.length > 0 ? words[0] : escaped;
+  const stopWords = new Set(['golf','club','course','links','country','national','the','and','of','at','park','resort','gc']);
+  // Strip generic words — search on the distinctive part only
+  const words = escaped.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+  // Use all meaningful words joined as a loose regex for best results
+  const nameFilter = words.length > 0 ? words.join('|') : escaped;
   const overpassQuery = `[out:json][timeout:12];(node["leisure"="golf_course"]["name"~"${nameFilter}",i];way["leisure"="golf_course"]["name"~"${nameFilter}",i];relation["leisure"="golf_course"]["name"~"${nameFilter}",i];);out center 10;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
@@ -668,6 +670,8 @@ const COURSE_DB = {
   "sea island":{ name:"Sea Island Golf Club", city:"St Simons Island", state:"GA" },
   "yeamans hall":{ name:"Yeamans Hall Club", city:"Hanahan", state:"SC" },
   "brook hollow":{ name:"Brook Hollow Golf Club", city:"Dallas", state:"TX" },
+  "el dorado":{ name:"El Dorado Park Golf Course", city:"Long Beach", state:"CA", lat:33.8085, lon:-118.0985 },
+  "el dorado park":{ name:"El Dorado Park Golf Course", city:"Long Beach", state:"CA", lat:33.8085, lon:-118.0985 },
   "trinity forest":{ name:"Trinity Forest Golf Club", city:"Dallas", state:"TX", lat:32.6957, lon:-96.7192 },
   "trinity forest golf":{ name:"Trinity Forest Golf Club", city:"Dallas", state:"TX", lat:32.6957, lon:-96.7192 },
   "tpc craig ranch":{ name:"TPC Craig Ranch", city:"McKinney", state:"TX", lat:33.1137, lon:-96.7082 },
@@ -695,15 +699,23 @@ const COURSE_DB = {
 
 function lookupCourse(raw) {
   const lower = raw.toLowerCase().trim();
+  // Exact match first
   for (const [key, val] of Object.entries(COURSE_DB)) {
     if (lower === key || lower.includes(key) || key.includes(lower)) return [val];
   }
-  const words = lower.split(/\s+/).filter(w => w.length > 3);
+  // Fuzzy: only match on meaningful words (not generic golf terms)
+  const stopWords = new Set(['golf','club','course','links','country','national','the','and','of','at','park','resort']);
+  const words = lower.split(/\s+/).filter(w => w.length > 3 && !stopWords.has(w));
+  if (words.length === 0) return []; // no meaningful words to match on
   const matches = [];
   const seen = new Set();
   for (const [key, val] of Object.entries(COURSE_DB)) {
     const score = words.filter(w => key.includes(w)).length;
-    if (score >= 1 && !seen.has(val.name)) { matches.push({...val, score}); seen.add(val.name); }
+    // Require ALL meaningful search words to match, not just 1
+    if (score >= words.length && score > 0 && !seen.has(val.name)) {
+      matches.push({...val, score});
+      seen.add(val.name);
+    }
   }
   return matches.sort((a,b) => b.score - a.score).slice(0, 4);
 }
@@ -1519,8 +1531,35 @@ async function run(query, displayName, cityOverride) {
       </div>`;
       return;
     }
-    // No course found — fall through to geocode below
-    mc.innerHTML = '';
+    // No course found — try a broader Overpass search for similar course names
+    mc.innerHTML = '<div class="loading">Searching for similar courses<span class="loading-dots"></span></div>';
+    try {
+      const broader = await searchCourseOverpass(query);
+      mc.innerHTML = '';
+      if (broader.length > 0) {
+        document.getElementById('quick-picks').style.display = 'block';
+        inlineErr.style.display = 'block';
+        const chips = broader.slice(0, 6).map(c => {
+          const label = c.name + (c.city ? ' — ' + c.city + (c.state ? ', ' + c.state : '') : '');
+          const safe = label.replace(/'/g, "\'");
+          return `<button class="chip" onclick="runLatLon(${c.lat}, ${c.lon}, '${safe}')">${c.name}${c.city ? ' <span style="opacity:0.6;font-size:11px">' + c.city + '</span>' : ''}</button>`;
+        }).join('');
+        inlineErr.innerHTML = `<div class="inline-error" style="background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark)">
+          <p style="color:var(--blue-dark);margin-bottom:8px">Did you mean one of these?</p>
+          <div class="suggestion-chips">${chips}</div>
+        </div>`;
+      } else {
+        document.getElementById('quick-picks').style.display = 'block';
+        inlineErr.style.display = 'block';
+        inlineErr.innerHTML = `<div class="inline-error">
+          <p>Couldn't find that course. Try searching the city it's in — e.g. "Long Beach" or "Scottsdale".</p>
+        </div>`;
+      }
+    } catch(e) {
+      mc.innerHTML = '';
+      document.getElementById('quick-picks').style.display = 'block';
+    }
+    return;
   }
 
   mc.innerHTML = `<div class="loading">Fetching forecast<span class="loading-dots"></span></div>`;
