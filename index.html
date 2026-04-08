@@ -511,11 +511,11 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 // ── Scoring ───────────────────────────────────────────────
 // wind: 22pts, rainProb: 18pts, rainVol: 22pts, temp: 22pts, humid: 16pts = 100
-function windScore(v)     { if(v<=5)return 22; if(v<=10)return 20; if(v<=15)return 16; if(v<=20)return 11; if(v<=25)return 6; if(v<=35)return 2; return 0; }
+function windScore(v)     { if(v<=5)return 24; if(v<=10)return 22; if(v<=15)return 17; if(v<=20)return 12; if(v<=25)return 6; if(v<=35)return 2; return 0; }
 function rainScore(v)     { if(v<=10)return 18; if(v<=20)return 15; if(v<=35)return 11; if(v<=50)return 6; if(v<=70)return 2; return 0; }
 function rainVolScore(mm) { if(mm<=0.1)return 22; if(mm<=0.5)return 18; if(mm<=1)return 13; if(mm<=3)return 6; if(mm<=6)return 2; return 0; }
-function tempScore(v)     { if(v>=62&&v<=82)return 22; if(v>=55&&v<=90)return 18; if(v>=45&&v<=95)return 13; if(v>=38&&v<=100)return 6; return 2; }
-function humidScore(v)    { if(v<=45)return 16; if(v<=60)return 13; if(v<=72)return 9; if(v<=85)return 4; return 1; }
+function tempScore(v)     { if(v>=62&&v<=82)return 26; if(v>=55&&v<=90)return 21; if(v>=45&&v<=95)return 14; if(v>=38&&v<=100)return 7; return 2; }
+function humidScore(v)    { if(v<=45)return 10; if(v<=60)return 8; if(v<=72)return 5; if(v<=85)return 2; return 0; }
 function hourScore(wind, rainProb, rainVol, temp, humid) {
   return windScore(wind) + rainScore(rainProb) + rainVolScore(rainVol) + tempScore(temp) + humidScore(humid);
 }
@@ -545,8 +545,15 @@ function gradeColor(g) {
 function factorLabel(type, val) {
   if (type==="wind")  { if(val<=8)return["Low","g"]; if(val<=18)return["Breezy","w"]; return["Strong","b"]; }
   if (type==="rain")  { if(val<=15)return["None","g"]; if(val<=40)return["Possible","w"]; return["Likely","b"]; }
-  if (type==="temp")  { if(val>=62&&val<=82)return["Perfect","g"]; if(val>=50&&val<=92)return["Ok","w"]; return["Rough","b"]; }
-  if (type==="humid") { if(val<=50)return["Comfortable","g"]; if(val<=72)return["Moderate","w"]; return["Muggy","b"]; }
+  if (type==="temp") {
+    if (val>=62&&val<=82) return["Perfect","g"];
+    if (val>=55&&val<62)  return["Chilly","w"];
+    if (val>82&&val<=90)  return["Warm","w"];
+    if (val>=45&&val<55)  return["Cold","b"];
+    if (val>90&&val<=98)  return["Hot","b"];
+    return["Extreme","b"];
+  }
+  if (type==="humid") { if(val<=50)return["Dry","g"]; if(val<=65)return["Comfortable","g"]; if(val<=78)return["Humid","w"]; return["Muggy","b"]; }
 }
 function barFill(cls) { return cls==="g"?"#639922":cls==="w"?"#EF9F27":"#E24B4A"; }
 function gradeTitle(g) {
