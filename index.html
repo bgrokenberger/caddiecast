@@ -668,6 +668,12 @@ const COURSE_DB = {
   "pelican hill":{ name:"Pelican Hill Golf Club", city:"Newport Coast", state:"CA" },
   "liberty national":{ name:"Liberty National Golf Club", city:"Jersey City", state:"NJ" },
   "pine valley":{ name:"Pine Valley Golf Club", city:"Pine Valley", state:"NJ", lat:39.7868, lon:-74.9654 },
+  "saucon valley":{ name:"Saucon Valley Country Club", city:"Bethlehem", state:"PA", lat:40.5787, lon:-75.3468 },
+  "saucon valley country club":{ name:"Saucon Valley Country Club", city:"Bethlehem", state:"PA", lat:40.5787, lon:-75.3468 },
+  "lehigh":{ name:"Lehigh Country Club", city:"Allentown", state:"PA", lat:40.6237, lon:-75.4902 },
+  "aronimink":{ name:"Aronimink Golf Club", city:"Newtown Square", state:"PA", lat:39.9887, lon:-75.3877 },
+  "merion":{ name:"Merion Golf Club", city:"Ardmore", state:"PA", lat:40.0037, lon:-75.2965 },
+  "philadelphia cricket":{ name:"Philadelphia Cricket Club", city:"Flourtown", state:"PA", lat:40.1112, lon:-75.2187 },
   "sand hills":{ name:"Sand Hills Golf Club", city:"Mullen", state:"NE" },
   "prairie dunes":{ name:"Prairie Dunes Country Club", city:"Hutchinson", state:"KS" },
   "crystal downs":{ name:"Crystal Downs Country Club", city:"Frankfort", state:"MI" },
@@ -733,8 +739,26 @@ function cleanCityQuery(raw) {
   return raw.replace(/,/g, " ").replace(/\s+/g, " ").trim();
 }
 
+async function geocodeZip(zip) {
+  // Use Zippopotam for US zip codes
+  const r = await fetch(`https://api.zippopotam.us/us/${zip}`);
+  if (!r.ok) throw new Error("Zip code not found.");
+  const d = await r.json();
+  const place = d.places[0];
+  return {
+    name: place['place name'],
+    admin1: place['state'],
+    latitude: parseFloat(place.latitude),
+    longitude: parseFloat(place.longitude),
+  };
+}
+
 async function geocode(raw) {
   const q = cleanCityQuery(raw);
+  // Detect US zip code (5 digits)
+  if (/^\d{5}$/.test(q.trim())) {
+    return await geocodeZip(q.trim());
+  }
   const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
   const d = await r.json();
   if (!d.results || !d.results.length) throw new Error("Location not found. Try just the city name.");
